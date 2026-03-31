@@ -11,7 +11,7 @@ function App() {
   return (
     <Router>
       {/* Barra de navegación base (usando un poco de Tailwind) */}
-      <nav className="bg-slate-800 text-white p-4 flex gap-6 shadow-md">
+      <nav className="bg-slate-800 text-white p-4 flex gap-6 shadow-md font-inconsolata">
         <div className="font-bold text-xl mr-4">🔬 Kernel-Lab</div>
         <Link to="/" className="hover:text-blue-400 transition-colors">Inicio</Link>
         <Link to="/simulator" className="hover:text-blue-400 transition-colors">Simulador</Link>
@@ -20,7 +20,7 @@ function App() {
       </nav>
 
       {/* El contenedor principal donde React Router inyecta las páginas */}
-      <main className="min-h-screen bg-slate-50">
+      <main className="min-h-screen bg-slate-200">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/simulator" element={<Simulator />} />
