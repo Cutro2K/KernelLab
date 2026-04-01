@@ -20,7 +20,7 @@ function App() {
       </nav>
 
       {/* El contenedor principal donde React Router inyecta las páginas */}
-      <main className="min-h-screen bg-slate-200">
+      <main className="min-h-screen bg-slate-200 py-5">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/simulator" element={<Simulator />} />
