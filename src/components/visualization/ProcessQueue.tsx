@@ -1,4 +1,5 @@
 export interface QueuedProcess {
+  id: string;
   name: string;
   size: number;
   status: 'ejecucion' | 'espera' | 'finalizado';
@@ -16,7 +17,7 @@ export function ProcessQueue({ processes }: ProcessQueueProps) {
   const finalizados = processes.filter(p => p.status === 'finalizado');
 
   
-  const ProcessCard = ({ proc }: { proc: QueuedProcess }) => (
+  const ProcessCard = ({ id, proc }: { id: string; proc: QueuedProcess }) => (
     <div className="border-2 border-gray-800 bg-white p-3 min-w-[120px] flex flex-col gap-2 shadow-[2px_2px_0px_rgba(0,0,0,0.1)]">
       <div className="font-bold text-gray-900">• {proc.name}</div>
       <div className="text-sm">{proc.size}KB</div>
@@ -53,7 +54,7 @@ export function ProcessQueue({ processes }: ProcessQueueProps) {
       </h3>
       <div className="flex flex-wrap gap-4">
         {list.length > 0 ? (
-          list.map(p => <ProcessCard proc={p} />)
+          list.map(p => <ProcessCard id ={p.id} proc={p} />)
         ) : (
           <span className="text-gray-500 italic text-sm">Vacío</span>
         )}
