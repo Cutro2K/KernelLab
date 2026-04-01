@@ -6,21 +6,27 @@ import Home from './pages/Home.tsx';
 import Simulator from './pages/Simulator';
 import Comparison from './pages/Comparison';
 import About from './pages/About';
+import settingsIcon from "./assets/settings.svg";
 
 function App() {
   return (
     <Router>
       {/* Barra de navegación base (usando un poco de Tailwind) */}
-      <nav className="bg-slate-800 text-white p-4 flex gap-6 shadow-md font-inconsolata">
-        <div className="font-bold text-xl mr-4">🔬 Kernel-Lab</div>
-        <Link to="/" className="hover:text-blue-400 transition-colors">Inicio</Link>
-        <Link to="/simulator" className="hover:text-blue-400 transition-colors">Simulador</Link>
-        <Link to="/comparison" className="hover:text-blue-400 transition-colors">Comparar</Link>
-        <Link to="/about" className="hover:text-blue-400 transition-colors">Docs</Link>
+      <nav className="flex flex-row border-2 mx-2 my-2 p-4 gap-6 shadow-md font-inconsolata">
+        <div className="font-bold w-full text-xl mr-4">&curren; Kernel-Lab</div>
+        <div className="w-full">
+        <Link to="/" className="hover:font-bold">[ Inicio ]</Link>
+        <Link to="/simulator" className="hover:font-bold">[ Simulador ]</Link>
+        <Link to="/comparison" className="hover:font-bold">[ Comparar ]</Link>
+        <Link to="/about" className="hover:font-bold">[ Docs ]</Link>
+        </div>
+        <div className="flex justify-end gap-2 flex-row text-right w-full">
+          <img className="w-[25px]" src={settingsIcon} alt="Settings" />
+        </div>
       </nav>
 
       {/* El contenedor principal donde React Router inyecta las páginas */}
-      <main className="min-h-screen bg-slate-200 py-5">
+      <main className="min-h-screen py-5">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/simulator" element={<Simulator />} />
