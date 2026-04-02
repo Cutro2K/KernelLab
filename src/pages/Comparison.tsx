@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ProcessCard } from '../components/visualization/ProcessCard';
+import { ProcessCard, RETRO_NEUTRAL_COLORS } from '../components/visualization/ProcessCard';
 import { Button } from '../components/ui/Button';
+import { useComparisonStore } from '../store/simulationStore';
 import dice from "../assets/dice.svg";
 import settingsIcon from "../assets/settings.svg";
 import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
+import { type Process } from '../algorithms/types';
 
 type AlgorithmMetrics = {
   usage: number;
@@ -598,8 +600,26 @@ function SimulatorPanel({
   );
 }
 
+export const CompProcessList = () => {
+  const processes = useComparisonStore((state) => state.processes);
+
+  return (<div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              {processes?.map((process) => (
+                <ProcessCard key={process.id} 
+                id={process.id} 
+                name={process.name} 
+                color={process.color} 
+                arrivalTime={process.arrivalTime} 
+                duration={process.duration}
+                stackSize={process.stackSize} />
+              ))}
+            </div>);
+}
+
 // Página principal de comparación: sincroniza ambos algoritmos, pasos y gráfico global.
 export default function Comparison() {
+  const addProcess = useComparisonStore((state) => state.addProcess);
+  const processCount = useComparisonStore((state) => state.processes?.length ?? 0);
   const [allocationMode, setAllocationMode] = useState<AllocationMode>('Contigua');
   const [leftSubAlgorithm, setLeftSubAlgorithm] = useState<AlgorithmOption>('First Fit');
   const [rightSubAlgorithm, setRightSubAlgorithm] = useState<AlgorithmOption>('Best Fit');
@@ -670,6 +690,33 @@ export default function Comparison() {
       higherIsBetter: false,
     },
   ];
+
+  const handleAddRandomProcesses = () => {
+    const totalToAdd = Math.floor(Math.random() * 5) + 3;
+
+    for (let i = 0; i < totalToAdd; i += 1) {
+      const processNumber = processCount + i + 1;
+      const codeSize = Math.floor(Math.random() * 40) + 10;
+      const dataSize = Math.floor(Math.random() * 40) + 10;
+      const stackSize = Math.floor(Math.random() * 30) + 8;
+      const heapSize = Math.floor(Math.random() * 50) + 12;
+
+      const process: Process = {
+        id: `P${processNumber}`,
+        name: `Proceso ${processNumber}`,
+        codeSize,
+        dataSize,
+        stackSize,
+        heapSize,
+        size: codeSize + dataSize + stackSize + heapSize,
+        arrivalTime: 0,
+        duration: Math.floor(Math.random() * 50) + 10,
+        color: RETRO_NEUTRAL_COLORS[Math.floor(Math.random() * RETRO_NEUTRAL_COLORS.length)],
+      };
+
+      addProcess(process);
+    }
+  };
 
   return (
     <section className="w-full bg-white px-3 py-4 text-[#2f2a24]">
@@ -767,22 +814,12 @@ export default function Comparison() {
         <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.08)]">
           <h3 className="mb-3 text-xl font-bold uppercase">* Procesos compartidos</h3>
           <div className="h-75 overflow-y-auto overflow-x-hidden border-2 border-[#111] bg-white p-3">
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-              <ProcessCard></ProcessCard>
-            </div>
+            <CompProcessList></CompProcessList>
           </div>
         </section>
 
         <section className="gap-2 w-full flex flex-row justify-end">
-          <Button variant="info" className="flex flex-row">
+          <Button variant="info" onClick={handleAddRandomProcesses} className="flex flex-row">
             <img src={dice} alt="Randomize" className="w-5 ml-2 mr-2" />
             Generar aleatorio
           </Button>

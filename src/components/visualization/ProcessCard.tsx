@@ -3,8 +3,9 @@ import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { Tooltip } from "../ui/Tooltip";
 import warningIcon from "../../assets/warning.svg";
+import { useComparisonStore } from "../../store/simulationStore";
 
-const RETRO_NEUTRAL_COLORS = [
+export const RETRO_NEUTRAL_COLORS = [
     "#A8A29E", // stone
     "#78716C", // warm gray
     "#9CA3AF", // gray
@@ -16,15 +17,17 @@ const RETRO_NEUTRAL_COLORS = [
     "#166534", // moss green
     "#1D4ED8", // muted blue
 ];
+    // Aquí deberías llamar a tu función de eliminación del proceso en el estado global
 
-export function ProcessCard() {
+export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, onDelete?: (id: string) => void}) {
+    const removeComparisonProcess = useComparisonStore((state) => state.removeProcess);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
-    const [processColor, setProcessColor] = useState("#B45309");
+    const [processColor, setProcessColor] = useState(color || "#B45309");
     const [editIsOpen, setEditIsOpen] = useState(false);
-    const [segmentCode, setSegmentCode] = useState(120);
-    const [segmentData, setSegmentData] = useState(250);
-    const [segmentStack, setSegmentStack] = useState(64);
-    const [segmentHeap, setSegmentHeap] = useState(250);
+    const [segmentCode, setSegmentCode] = useState(codeSize || 120);
+    const [segmentData, setSegmentData] = useState(dataSize || 250);
+    const [segmentStack, setSegmentStack] = useState(stackSize || 64);
+    const [segmentHeap, setSegmentHeap] = useState(heapSize || 250);
 
     const totalSize = segmentCode + segmentData + segmentStack + segmentHeap;
 
@@ -59,6 +62,7 @@ export function ProcessCard() {
     // Mock stats for tooltip
     const tooltipContent = (
         <div className="text-xs space-y-1">
+            <div className="text-lg">ID: {id}</div>
             <div className="text-lg"><span className="font-bold">Estado:</span> En espera</div>
             <div className="text-lg"><span className="font-bold">Eficiencia:</span> 92%</div>
             <div className="text-lg"><span className="font-bold">Tiempo esperado:</span> 5 ciclos</div>
@@ -72,10 +76,10 @@ export function ProcessCard() {
             <Tooltip content={tooltipContent}>
                 <div className="border-2 border-[#111] bg-[#ececec] h-fit p-4 cursor-help">
                     <div>
-                        <h4 className="text-lg font-bold mb-2">Proceso A</h4>
-                        <p>Tamano: 60KB</p>
-                        <p>Llegada: [ 26 ] t</p>
-                        <p>Duracion: [ 3 ] ciclos</p>
+                        <h4 className="text-lg font-bold mb-2">{name}</h4>
+                        <p>Tamano: {totalSize}KB</p>
+                        <p>Llegada: {arrivalTime} t</p>
+                        <p>Duracion: {duration} ciclos</p>
                         <div className="flex items-center gap-2">
                             <p>Color:</p>
                             <button
@@ -94,7 +98,7 @@ export function ProcessCard() {
                         <Button variant="info" className="mr-2" onClick={() => setEditIsOpen(true)}>
                             Editar
                         </Button>
-                        <Button variant="primary">Eliminar</Button>
+                        <Button onClick={() => id && (onDelete ? onDelete(id.toString()) : removeComparisonProcess(id.toString()))} variant="primary">Eliminar</Button>
                         </div>
                     </div>
                 </div>
@@ -113,7 +117,7 @@ export function ProcessCard() {
                     <form className="border-2 border-[#111] bg-[#f5f5f5] p-4" onSubmit={(event) => event.preventDefault()}>
                         <div className="mb-4 flex items-start justify-between gap-4 border-b-2 border-[#111] pb-3">
                             <div className="text-center items-center justify-center">
-                                <h3 className="mx-auto">PROCESS_NAME</h3>
+                                <h3 className="mx-auto">{name}</h3>
                             </div>
                             <div className="min-w-40 gap-5 border-2 flex flex-row border-[#111] bg-white px-3 py-2 text-right">
                                 <Tooltip content="El proceso es mas grande que el espacio disponible">
