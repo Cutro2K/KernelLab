@@ -3,6 +3,7 @@ import { ProcessCard } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
 import { type MemoryBlock } from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
+import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 
 export default function Simulator() {
 
@@ -48,7 +49,7 @@ export default function Simulator() {
   ];
 
   return (
-    // CONTENEDOR PRINCIPAL: Responsive flex (Columna en móvil, Fila en PC)
+    
     <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
       
       {/* =========================================
@@ -66,7 +67,7 @@ export default function Simulator() {
         </div>
         
         <div className="flex flex-col gap-2 mt-2">
-          <Button variant="primary" className="border-2 border-black bg-transparent text-black hover:bg-black/10">[+ Agregar]</Button>
+          <Button variant="primary" className="border-2 border-black">[+ Agregar]</Button>
           <Button variant="secondary" className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
         </div>
       </div>
@@ -78,11 +79,8 @@ export default function Simulator() {
 
         <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; CONFIGURACIÓN</h1>
 
-        <div className="flex flex-col w-full gap-2 py-3 px-4 border-2 border-black">
-            <p>Algoritmo: [Best Fit ▼] </p>
-            <p>Memoria:   [==•==============================] 512KB </p>
-            <p>OS:        [==•======] 64KB </p>      
-        </div>
+        <MemoryConfig />
+        <AlgorithmConfig />
         
         <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; VISUALIZACIÓN DE MEMORIA</h1>
         
@@ -91,6 +89,7 @@ export default function Simulator() {
         {/* Usamos w-full para que el mapa ocupe el ancho disponible */}
         <div className="w-full px-2 lg:px-6 overflow-x-auto">
           <MemoryMap
+            className="mx-auto"
             memoryState={mockMemoryState} 
             totalMemory={TOTAL_MEMORY} 
             algorithmId="first-fit" 

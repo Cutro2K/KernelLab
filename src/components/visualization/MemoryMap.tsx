@@ -4,6 +4,7 @@ import { type MemoryBlock as MemoryBlockType,type AlgorithmType } from '../../al
 import { ALGORITHM_REGISTRY } from '../../algorithms/types'; // Asumiendo que exportas el registro de tu Doc 1
 
 interface MemoryMapProps {
+  className?: string;
   memoryState: MemoryBlockType[];
   totalMemory: number;
   algorithmId: AlgorithmType;
@@ -11,7 +12,7 @@ interface MemoryMapProps {
   segmentTable?: any[];
 }
 
-export function MemoryMap({ memoryState, totalMemory, algorithmId, pageTable, segmentTable }: MemoryMapProps) {
+export function MemoryMap({ memoryState, totalMemory, algorithmId, pageTable, segmentTable, className = '', }: MemoryMapProps) {
   const meta = ALGORITHM_REGISTRY[algorithmId];
 
     if (!meta) {
@@ -25,7 +26,7 @@ export function MemoryMap({ memoryState, totalMemory, algorithmId, pageTable, se
   const stats = calculateStats(memoryState, totalMemory);
 
   return (
-    <div className="flex flex-col gap-2 flex-1 w-[500px] h-full bg-gray-100 border-2 border-black shadow-md overflow-hidden">        
+    <div className={`flex flex-col gap-2 flex-1 w-[500px] h-full bg-gray-100 border-2 border-black shadow-md overflow-hidden ${className}`}>        
         <div className="flex flex-row mt-2 mx-2 flex-1 overflow-x-auto bg-gray-50">
           {memoryState.map((block) => (
             <MemoryBlock 
