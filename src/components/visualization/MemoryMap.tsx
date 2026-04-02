@@ -1,13 +1,13 @@
 import { calculateStats } from '../../utils/helpers';
 import { MemoryBlock } from './MemoryBlock';
-import { type MemoryBlock as MemoryBlockType,type AlgorithmType } from '../../algorithms/types';
+import { type MemoryBlock as MemoryBlockType,type AlgorithmOption } from '../../algorithms/types';
 import { ALGORITHM_REGISTRY } from '../../algorithms/types'; // Asumiendo que exportas el registro de tu Doc 1
 
 interface MemoryMapProps {
   className?: string;
   memoryState: MemoryBlockType[];
   totalMemory: number;
-  algorithmId: AlgorithmType;
+  algorithmId: AlgorithmOption;
   pageTable?: any[]; 
   segmentTable?: any[];
 }
