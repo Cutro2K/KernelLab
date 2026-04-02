@@ -1,20 +1,14 @@
-// src/pages/Simulator.tsx
-import { useState } from 'react';
+import { Button } from "../components/ui/Button";
+import { ProcessCard } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { MemoryMap } from '../components/visualization/MemoryMap';
-import { ProcessQueue, type QueuedProcess } from '../components/visualization/ProcessQueue';
-import { Modal } from '../components/ui/Modal';
-import { Button } from '../components/ui/Button';
-import { type MemoryBlock } from '../algorithms/types'; // Asegurate de que la ruta sea correcta
+import { type MemoryBlock } from  "../algorithms/types";
+import { MemoryMap } from "../components/visualization/MemoryMap";
 
 export default function Simulator() {
-  const [isRunning, setIsRunning] = useState(false);
-  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
 
-  // 1. DATOS DE MENTIRA: Simulamos una RAM de 512KB
+  // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
   const TOTAL_MEMORY = 512;
 
-  // Creamos un estado de memoria "a mano" como si el algoritmo ya hubiera corrido
   const mockMemoryState: MemoryBlock[] = [
     {
       id: 'block-os',
@@ -47,66 +41,119 @@ export default function Simulator() {
     {
       id: 'block-free-2',
       start: 344,
-      size: 168, // El resto hasta llegar a 512
+      size: 168,
       isFree: true,
       process: null
     }
   ];
 
-  // 2. DATOS DE LA COLA (Los que usamos antes)
-  const mockProcesses: QueuedProcess[] = [
-    { id: '1', name: 'P1', size: 120, status: 'ejecucion', progress: 60 },
-    { id: '2', name: 'P2', size: 60, status: 'ejecucion', progress: 10 },
-    { id: '4', name: 'P4', size: 200, status: 'espera', arrivalTime: 4 },
-  ];
-
   return (
-    <div className="p-10 flex flex-col gap-6 font-mono max-w-6xl mx-auto">
+    // CONTENEDOR PRINCIPAL: Responsive flex (Columna en móvil, Fila en PC)
+    <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
       
-      {/* Cabecera */}
-      <div className="flex justify-between items-end border-b-2 border-gray-800 pb-4">
-        <div>
-          <h1 className="text-3xl font-bold font-sans uppercase">Simulador de Memoria</h1>
-          <p className="text-gray-600 mt-1">Algoritmo actual: <span className="font-bold text-blue-600">First Fit</span></p>
+      {/* =========================================
+          COLUMNA 1: PROCESOS (25% en PC) 
+      ========================================= */}
+      <div className="w-full lg:w-1/4 flex flex-col gap-2 border-2 border-black px-2 py-2 bg-[#ffb6c1]/10">
+        <h1 className="text-lg font-bold pl-2 pb-2">&curren; PROCESOS</h1>
+        
+        {/* Cambié la altura fija por max-h para que no sea inmenso en celular */}
+        <div className="border-y-2 border-black py-3 max-h-[600px] flex flex-col gap-3 overflow-y-auto">
+          <ProcessCard/>
+          <ProcessCard/>
+          <ProcessCard/>
+          <ProcessCard/>
         </div>
-        <Button variant="primary" onClick={() => setIsQueueModalOpen(true)}>
-          Ver Cola de Procesos
-        </Button>
-      </div>
-      
-      {/* Controles */}
-      <div className="bg-gray-100 p-2 rounded border border-gray-300 w-fit">
-        <StepControls 
-          onPlay={() => setIsRunning(true)}
-          onPause={() => setIsRunning(false)}
-          onStepForward={() => console.log("Avanzando un paso...")}
-          onStepBackward={() => console.log("Retrocediendo un paso...")}
-          onReset={() => setIsRunning(false)}
-          isRunning={isRunning} 
-        />
-      </div>
-
-      {/* Mapa de Memoria Visual */}
-      <div className="mt-4">
-        <MemoryMap 
-          memoryState={mockMemoryState} 
-          totalMemory={TOTAL_MEMORY} 
-          algorithmId="first-fit" 
-        />
-      </div>
-
-      {/* Modal de la Cola */}
-      <Modal 
-        isOpen={isQueueModalOpen} 
-        onClose={() => setIsQueueModalOpen(false)}
-        title="* COLA DE PROCESOS"
-        maxWidth="max-w-4xl"
-      >
-        <div className="max-h-[70vh] overflow-y-auto">
-          <ProcessQueue processes={mockProcesses} />
+        
+        <div className="flex flex-col gap-2 mt-2">
+          <Button variant="primary" className="border-2 border-black bg-transparent text-black hover:bg-black/10">[+ Agregar]</Button>
+          <Button variant="secondary" className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
         </div>
-      </Modal>
+      </div>
 
+      {/* =========================================
+          COLUMNA 2: CONFIGURACIÓN Y MAPA (50% en PC) 
+      ========================================= */}
+      <div className="w-full lg:w-2/4 flex flex-col gap-5 border-2 border-black px-2 py-2 bg-[#ffb6c1]/10">
+
+        <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; CONFIGURACIÓN</h1>
+
+        <div className="flex flex-col w-full gap-2 py-3 px-4 border-2 border-black">
+            <p>Algoritmo: [Best Fit ▼] </p>
+            <p>Memoria:   [==•==============================] 512KB </p>
+            <p>OS:        [==•======] 64KB </p>      
+        </div>
+        
+        <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; VISUALIZACIÓN DE MEMORIA</h1>
+        
+        <p className="px-2 text-sm text-center">Particiones (dirección baja &rarr; alta)</p>
+        
+        {/* Usamos w-full para que el mapa ocupe el ancho disponible */}
+        <div className="w-full px-2 lg:px-6 overflow-x-auto">
+          <MemoryMap
+            memoryState={mockMemoryState} 
+            totalMemory={TOTAL_MEMORY} 
+            algorithmId="first-fit" 
+          />      
+        </div>
+        
+        <div className="mx-auto flex justify-center w-full">
+          <StepControls
+            onPlay={() => console.log('Play')}
+            onPause={() => console.log('Pause')}
+            onStepForward={() => console.log('Step Forward')}
+            onStepBackward={() => console.log('Step Backward')}
+            onReset={() => console.log('Reset')}
+          />
+        </div>
+        
+        {/* Cambié w-[400px] por max-w-[400px] w-full para evitar que rompa pantallas chicas */}
+        <div className="w-full max-w-[400px] border-2 border-black mx-auto bg-transparent">
+            <p className="p-4 leading-relaxed text-sm">
+              &curren; PASO 3: <br/> <br /> 
+              "Best Fit asigna P1 (40KB) al bloque libre de 52KB en posición 460KB. <br /> 
+              Fragmentación interna: 12KB"
+            </p>   
+        </div>
+      </div>
+
+      {/* =========================================
+          COLUMNA 3: ESTADÍSTICAS (25% en PC) 
+      ========================================= */}
+      <div className="w-full lg:w-1/4 flex flex-col border-2 border-black px-4 py-4 bg-[#ffb6c1]/10">
+        
+        <h1 className="text-lg font-bold pb-2 border-b-2 border-black mb-4">&curren; ESTADÍSTICAS</h1>
+
+        {/* Info Básica */}
+        <div className="flex flex-col gap-2 border-b-2 border-black pb-4 text-sm">
+          <div className="flex justify-between"><span>Total:</span> <span>512KB</span></div>
+          <div className="flex justify-between"><span>Usado:</span> <span>320KB</span></div>
+          <div className="flex justify-between"><span>Libre:</span> <span>192KB</span></div>
+        </div>
+
+        {/* Barra de Progreso Visual */}
+        <div className="py-4 border-b-2 border-black flex flex-col items-center gap-2">
+          <div className="w-full h-8 border-2 border-black flex p-1">
+            <div className="h-full bg-black/80 w-[62.5%] transition-all"></div>
+          </div>
+          <span className="text-sm border-2 border-black px-2 mt-1">62.5%</span>
+        </div>
+
+        {/* Detalle de Fragmentación */}
+        <div className="flex flex-col gap-2 py-4 border-b-2 border-black text-sm">
+          <div className="flex justify-between"><span>Frag ext:</span> <span>192KB</span></div>
+          <div className="flex justify-between"><span>Bloq libre:</span> <span>2</span></div>
+          <div className="flex justify-between"><span>Bloq ocup:</span> <span>3</span></div>
+        </div>
+
+        {/* Info de Cola */}
+        <div className="flex flex-col gap-2 pt-4 text-sm">
+          <div className="flex justify-between"><span>Activos:</span> <span>3/5</span></div>
+          <div className="flex justify-between"><span>Espera:</span> <span>2</span></div>
+          <div className="flex justify-between"><span>Rechazados:</span> <span>0</span></div>
+        </div>
+
+      </div>
     </div>
   );
 }
