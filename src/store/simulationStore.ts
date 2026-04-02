@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import {type Process, type SimulationStep, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption} from '../algorithms/types';
+import {type Process, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption} from '../algorithms/types';
 
 interface SimulationStore {
     algorithm: AlgorithmType | null;

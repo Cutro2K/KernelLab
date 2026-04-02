@@ -1,10 +1,14 @@
 import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
 import { ProcessCard, RETRO_NEUTRAL_COLORS } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { type MemoryBlock, type Process } from  "../algorithms/types";
+import { type MemoryBlock, type Process , type QueuedProcess} from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 import { useStore } from "../store/simulationStore";
+import { useState } from 'react';
+import { ProcessQueue } from "../components/visualization/ProcessQueue";
+
 
 export const SimProcessList = () => {
   const processes = useStore((state) => state.processes);
@@ -66,9 +70,10 @@ export default function Simulator() {
     }
   };
 
+  
   // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
   const TOTAL_MEMORY = 512;
-
+  const [isViewProces, setViewProces] = useState(false);
   const mockMemoryState: MemoryBlock[] = [
     {
       id: 'block-os',
@@ -139,7 +144,61 @@ export default function Simulator() {
       process: null
     }
   ];
+  const mockProcessQueue: QueuedProcess[] = [
+  // --- Procesos en Ejecución (Deberían mostrar la barra de progreso) ---
+  { 
+    id: 'p1', 
+    name: 'P1', 
+    size: 128, 
+    status: 'ejecucion', 
+    progress: 85 
+  },
+  { 
+    id: 'p2', 
+    name: 'P2', 
+    size: 64, 
+    status: 'ejecucion', 
+    progress: 30 
+  },
 
+  // --- Procesos en Espera (Deberían mostrar el arrivalTime) ---
+  { 
+    id: 'p3', 
+    name: 'P3', 
+    size: 256, 
+    status: 'espera', 
+    arrivalTime: 3 
+  },
+  { 
+    id: 'p4', 
+    name: 'P4', 
+    size: 512, 
+    status: 'espera', 
+    arrivalTime: 5 
+  },
+  { 
+    id: 'p5', 
+    name: 'P5', 
+    size: 1024, 
+    status: 'espera', 
+    arrivalTime: 8 
+  },
+
+  // --- Procesos Finalizados (Solo muestran la etiqueta de finalizado) ---
+  { 
+    id: 'p0', 
+    name: 'P0', 
+    size: 32, 
+    status: 'finalizado' 
+  },
+  { 
+    id: 'p6', 
+    name: 'P6', 
+    size: 128, 
+    status: 'finalizado' 
+  }
+  ];
+  
   return (
     
     <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
@@ -175,7 +234,6 @@ export default function Simulator() {
         
         <p className="px-2 text-sm text-center">Particiones (dirección baja &rarr; alta)</p>
         
-        {/* Usamos w-full para que el mapa ocupe el ancho disponible */}
         <div className="w-full px-2 lg:px-6 overflow-x-auto">
           <MemoryMap
             className="mx-auto"
@@ -194,8 +252,6 @@ export default function Simulator() {
             onReset={() => console.log('Reset')}
           />
         </div>
-        
-        {/* Cambié w-[400px] por max-w-[400px] w-full para evitar que rompa pantallas chicas */}
         <div className="w-full max-w-[400px] border-2 border-black mx-auto bg-transparent">
             <p className="p-4 leading-relaxed text-sm">
               &curren; PASO 3: <br/> <br /> 
@@ -240,8 +296,28 @@ export default function Simulator() {
           <div className="flex justify-between"><span>Espera:</span> <span>2</span></div>
           <div className="flex justify-between"><span>Rechazados:</span> <span>0</span></div>
         </div>
-
+        <div className="flex flex-col gap-2 mt-2">
+          <Button 
+          variant="primary" 
+          className="border-2 border-black"
+          onClick={() => setViewProces(true)}
+          > 
+          [Ver Procesos]
+          </Button>
+        </div>
       </div>
+
+      <Modal 
+        isOpen={isViewProces} 
+        onClose={() => setViewProces(false)}
+        title="* COLA DE PROCESOS"
+        maxWidth="max-w-4xl"
+      >
+        <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-2">
+          <ProcessQueue processes={mockProcessQueue} />
+        </div>
+      </Modal>
+
     </div>
   );
 }
