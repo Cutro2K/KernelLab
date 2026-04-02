@@ -3,3 +3,9 @@
 @theme {
   --font-inconsolata: "Inconsolata", monospace;
 }
+
+html,
+body,
+#root {
+  font-family: var(--font-inconsolata);
+}
