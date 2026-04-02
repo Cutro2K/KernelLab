@@ -21,7 +21,7 @@ export function StepControls({
   isRunning = false 
 }: StepControlsProps) {
   return (
-    <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm w-fit">
+    <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl w-fit">
       
       {/* Botón para avanzar 1 solo paso hacia atras (se deshabilita si está en auto-play) */}
       <Button 
