@@ -1,14 +1,72 @@
 import { Button } from "../components/ui/Button";
-import { useState } from 'react';
 import { ProcessCard } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { type MemoryBlock , type QueuedProcess} from  "../algorithms/types";
+import { type MemoryBlock } from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
+import { useStore } from "../store/simulationStore";
+
+export const SimProcessList = () => {
+  const processes = useStore((state) => state.processes);
+  const removeProcess = useStore((state) => state.removeProcess);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {processes && processes.length > 0 ? (
+        processes.map((process) => (
+          <ProcessCard
+            key={process.id}
+            id={process.id}
+            name={process.name}
+            color={process.color}
+            codeSize={process.codeSize}
+            dataSize={process.dataSize}
+            stackSize={process.stackSize}
+            heapSize={process.heapSize}
+            arrivalTime={process.arrivalTime}
+            duration={process.duration}
+            onDelete={removeProcess}
+          />
+        ))
+      ) : (
+        <div className="border-2 border-black bg-white px-3 py-2 text-sm">No hay procesos cargados.</div>
+      )}
+    </div>
+  );
+};
 import { ProcessQueue } from "../components/visualization/ProcessQueue";
 import { Modal } from "../components/ui/Modal";
 
 export default function Simulator() {
+  const addProcess = useStore((state) => state.addProcess);
+  const processCount = useStore((state) => state.processes?.length ?? 0);
+
+  const handleRandomProcesses = () => {
+    const totalToAdd = Math.floor(Math.random() * 5) + 3;
+
+    for (let i = 0; i < totalToAdd; i += 1) {
+      const processNumber = processCount + i + 1;
+      const codeSize = Math.floor(Math.random() * 40) + 10;
+      const dataSize = Math.floor(Math.random() * 40) + 10;
+      const stackSize = Math.floor(Math.random() * 30) + 8;
+      const heapSize = Math.floor(Math.random() * 50) + 12;
+
+      const process: Process = {
+        id: `P${processNumber}`,
+        name: `Proceso ${processNumber}`,
+        codeSize,
+        dataSize,
+        stackSize,
+        heapSize,
+        size: codeSize + dataSize + stackSize + heapSize,
+        arrivalTime: Math.floor(Math.random() * 20),
+        duration: Math.floor(Math.random() * 50) + 10,
+        color: RETRO_NEUTRAL_COLORS[Math.floor(Math.random() * RETRO_NEUTRAL_COLORS.length)],
+      };
+
+      addProcess(process);
+    }
+  };
 
   // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
   const TOTAL_MEMORY = 512;
@@ -19,14 +77,36 @@ export default function Simulator() {
       start: 0,
       size: 64,
       isFree: false,
-      process: { id: 'os', name: 'OS', size: 64, color: 'bg-red-200', arrivalTime: 0, duration: 999 }
+      process: {
+        id: 'os',
+        name: 'OS',
+        size: 64,
+        codeSize: 24,
+        dataSize: 16,
+        stackSize: 8,
+        heapSize: 16,
+        color: '#ef4444',
+        arrivalTime: 0,
+        duration: 999,
+      }
     },
     {
       id: 'block-1',
       start: 64,
       size: 120,
       isFree: false,
-      process: { id: 'p1', name: 'P1', size: 120, color: 'bg-blue-200', arrivalTime: 0, duration: 5 }
+      process: {
+        id: 'p1',
+        name: 'P1',
+        size: 120,
+        codeSize: 40,
+        dataSize: 30,
+        stackSize: 20,
+        heapSize: 30,
+        color: '#60a5fa',
+        arrivalTime: 0,
+        duration: 5,
+      }
     },
     {
       id: 'block-free-1',
@@ -40,7 +120,18 @@ export default function Simulator() {
       start: 284,
       size: 60,
       isFree: false,
-      process: { id: 'p2', name: 'P2', size: 60, color: 'bg-green-200', arrivalTime: 2, duration: 3 }
+      process: {
+        id: 'p2',
+        name: 'P2',
+        size: 60,
+        codeSize: 18,
+        dataSize: 16,
+        stackSize: 10,
+        heapSize: 16,
+        color: '#4ade80',
+        arrivalTime: 2,
+        duration: 3,
+      }
     },
     {
       id: 'block-free-2',
@@ -133,15 +224,12 @@ export default function Simulator() {
         
         {/* Cambié la altura fija por max-h para que no sea inmenso en celular */}
         <div className="border-y-2 border-black py-3 max-h-[600px] flex flex-col gap-3 overflow-y-auto">
-          <ProcessCard/>
-          <ProcessCard/>
-          <ProcessCard/>
-          <ProcessCard/>
+          <SimProcessList />
         </div>
         
         <div className="flex flex-col gap-2 mt-2">
           <Button variant="primary" className="border-2 border-black">[+ Agregar]</Button>
-          <Button variant="secondary" className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
+          <Button variant="secondary" onClick={handleRandomProcesses} className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
         </div>
       </div>
 

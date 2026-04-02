@@ -31,6 +31,10 @@ export interface Process {
   id: string;
   name: string;
   size: number;
+  codeSize: number;
+  stackSize: number;
+  dataSize: number;
+  heapSize: number;
   color: string;
   arrivalTime: number;
   duration: number;
