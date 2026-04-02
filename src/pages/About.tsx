@@ -78,7 +78,7 @@ export default function About() {
 
   return (
     <section
-      className="min-h-[calc(100vh-140px)] border-2 border-[#111] bg-linear-to-br from-[#f9f7f1] via-[#f3f6fb] to-[#ece6df]"
+      className="relative flex h-[calc(100vh-140px)] flex-col overflow-hidden border-2 border-[#111] bg-linear-to-br from-[#f9f7f1] via-[#f3f6fb] to-[#ece6df]"
       aria-label="Documentacion de Kernel-Lab"
     >
       <header className="border-b-2 border-[#111] bg-slate-200 px-4 py-5">
@@ -89,7 +89,7 @@ export default function About() {
         </p>
       </header>
 
-      <div ref={containerRef} className="relative flex min-h-[68vh] max-[900px]:flex-col">
+      <div ref={containerRef} className="relative flex min-h-0 flex-1 max-[900px]:flex-col">
         <nav
           className="flex shrink-0 grow-0 basis-auto flex-col gap-2 border-r-2 border-[#111] bg-[#fafafa] p-4 max-[900px]:w-full max-[900px]:border-r-0 max-[900px]:border-b-2"
           aria-label="Indice de documentacion"
@@ -134,7 +134,7 @@ export default function About() {
           />
         ) : null}
 
-        <article className="grid flex-1 gap-5 px-6 py-5 max-[900px]:px-4">
+        <article className="relative grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 max-[900px]:px-4">
           <section id="intro" className="border-2 border-[#111] bg-white/85 p-4 shadow-[6px_6px_0_0_rgba(17,17,17,0.15)]">
             <h2 className="mt-0 text-2xl font-bold">+-- Introduccion</h2>
             <p>
