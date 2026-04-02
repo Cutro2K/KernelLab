@@ -43,7 +43,8 @@ export interface MemoryBlock {
   process: Process | null;
   isFree: boolean;
 }
-interface AlgorithmMeta {
+
+export interface AlgorithmMeta {
     id: AlgorithmOption;
     name: string;
     category: 'allocation' | 'replacement' | 'advanced';
@@ -51,6 +52,49 @@ interface AlgorithmMeta {
     requiresPageSize: boolean; // paginación necesita pageSize
     requiresSegments: boolean; // segmentación necesita tabla de segment
     splitsProcess: boolean; // ← LA CLAVE
+}
+
+// STORE INTERFACES
+
+export interface StepStats {
+    totalFragmentation: number;
+    externalFragmentation: number;
+    internalFragmentation: number;
+    pageFaults: number;
+    pageHits: number;
+    memoryUsage: number; // porcentaje
+}
+
+export interface SimulationStep {
+    stepNumber: number;
+    action: string; // "ALLOCATE" | "DEALLOCATE" | "PAGE_FAULT" | ...
+    description: string; // texto legible para el usuario
+    memoryState: MemoryBlock[];
+    processQueue: Process[];
+    highlights: string[]; // IDs de bloques a resaltar
+    stats: StepStats;
+}
+
+export interface SimulationConfig {
+    algorithm: AlgorithmOption;
+    totalMemory: number;
+    processes: Process[];
+    frames?: number; // para paginación
+    pageSize?: number;
+    referenceString?: number[]; // para reemplazo de páginas
+}
+
+export interface SimulationStore {
+    algorithm: AlgorithmOption | null;
+    memoryState: MemoryBlock[] | null;
+    currentStep: SimulationStep | null;
+    configParams: SimulationConfig | null;
+    statistics: StepStats | null;
+    setMemState: (state : MemoryBlock[]) => void;
+    setAlgorithm: (algo: AlgorithmOption) => void;
+    setStep: (step: SimulationStep) => void;
+    setParams: (params : SimulationConfig) => void;
+    setStats: (stats : StepStats) => void;
 }
 
 // Registro central
