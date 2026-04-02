@@ -517,7 +517,7 @@ function SimulatorPanel({
   const showSegmentationSelector = subAlgorithm === 'Segmentacion';
 
   return (
-    <section className="border-2 border-[#111] bg-white p-4">
+    <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.1)]">
       <header className="mb-4 border-b-2 border-[#111] pb-2">
         <h3 className="text-xl font-bold uppercase tracking-wide">{title}</h3>
       </header>
@@ -530,7 +530,7 @@ function SimulatorPanel({
             <select
               value={allocationMode}
               onChange={(event) => onAllocationModeChange(event.target.value as AllocationMode)}
-              className="border-2 border-[#111] bg-white px-2 py-1 text-sm font-bold"
+              className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
             >
               <option value="Contigua">Contigua</option>
               <option value="No contigua">No contigua</option>
@@ -542,7 +542,7 @@ function SimulatorPanel({
             <select
               value={subAlgorithm}
               onChange={(event) => onSubAlgorithmChange(event.target.value as AlgorithmOption)}
-              className="border-2 border-[#111] bg-white px-2 py-1 text-sm font-bold"
+              className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
             >
               {subAlgorithmOptions.map((option) => (
                 <option key={option} value={option}>
@@ -558,7 +558,7 @@ function SimulatorPanel({
               <select
                 value={replacementAlgorithm}
                 onChange={(event) => onReplacementAlgorithmChange(event.target.value as AlgorithmOption)}
-                className="border-2 border-[#111] bg-white px-2 py-1 text-sm font-bold"
+                className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
               >
                 {PAGE_REPLACEMENT_ALGORITHMS.map((option) => (
                   <option key={option} value={option}>
@@ -575,7 +575,7 @@ function SimulatorPanel({
               <select
                 value={segmentationStrategy}
                 onChange={(event) => onSegmentationStrategyChange(event.target.value as AlgorithmOption)}
-                className="border-2 border-[#111] bg-white px-2 py-1 text-sm font-bold"
+                className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
               >
                 {CONTIGUOUS_ALGORITHMS.map((option) => (
                   <option key={option} value={option}>
