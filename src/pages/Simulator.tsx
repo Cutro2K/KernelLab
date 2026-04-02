@@ -92,7 +92,7 @@ export default function Simulator() {
             className="mx-auto"
             memoryState={mockMemoryState} 
             totalMemory={TOTAL_MEMORY} 
-            algorithmId="first-fit" 
+            algorithmId="First Fit" 
           />      
         </div>
         

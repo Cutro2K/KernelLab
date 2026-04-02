@@ -3,23 +3,8 @@ import { ProcessCard } from '../components/visualization/ProcessCard';
 import { Button } from '../components/ui/Button';
 import dice from "../assets/dice.svg";
 import settingsIcon from "../assets/settings.svg";
-
-type AlgorithmOption =
-  | 'First Fit'
-  | 'Best Fit'
-  | 'Worst Fit'
-  | 'Next Fit'
-  | 'Buddy System'
-  | 'Paginacion Simple'
-  | 'OPT'
-  | 'FIFO'
-  | 'LRU'
-  | 'NRU'
-  | 'Segunda Oportunidad'
-  | 'Clock'
-  | 'Segmentacion';
-
-type AllocationMode = 'Contigua' | 'No contigua';
+import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
+import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 
 type AlgorithmMetrics = {
   usage: number;
@@ -462,9 +447,6 @@ const ALGORITHM_STYLES: Record<AlgorithmOption, { fill: string; pattern: string;
   },
 };
 
-const CONTIGUOUS_ALGORITHMS: AlgorithmOption[] = ['First Fit', 'Next Fit', 'Best Fit', 'Worst Fit', 'Buddy System'];
-const NON_CONTIGUOUS_ALGORITHMS: AlgorithmOption[] = ['Paginacion Simple', 'Segmentacion'];
-const PAGE_REPLACEMENT_ALGORITHMS: AlgorithmOption[] = ['OPT', 'FIFO', 'LRU', 'NRU', 'Segunda Oportunidad', 'Clock'];
 
 // Vista simplificada de bloques de memoria para un snapshot puntual del algoritmo.
 function MemoryPreview({ chunks }: { chunks: string[] }) {

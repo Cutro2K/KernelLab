@@ -1,17 +1,32 @@
 import React from 'react';
 
-export type AlgorithmType =
-  | 'first-fit'
-  | 'paging' | 'segmentation' | 'buddy-system' | 'best-fit' | 'worst-fit' | 'next-fit'
-  | 'fifo' | 'lru' | 'optimal' | 'clock';
+// TYPES
 
-type AllocationStrategy =
-| 'contiguous' // proceso → 1 bloque
-| 'paged' // proceso → N páginas (tamaño fijo)
-| 'segmented' // proceso → N segmentos (tamaño variable)
-| 'buddy'; // proceso → 1 bloque (potencia de 2)
+export type AlgorithmOption =
+  | 'First Fit'
+  | 'Best Fit'
+  | 'Worst Fit'
+  | 'Next Fit'
+  | 'Buddy System'
+  | 'Paginacion Simple'
+  | 'OPT'
+  | 'FIFO'
+  | 'LRU'
+  | 'NRU'
+  | 'Segunda Oportunidad'
+  | 'Clock'
+  | 'Segmentacion';
 
+export type AllocationMode = 'Contigua' | 'No contigua';
 
+// VARIABLES
+
+export const ALLOCATIONS : AllocationMode[] = ['Contigua', 'No contigua'];
+export const NON_CONTIGUOUS_ALGORITHMS: AlgorithmOption[] = ['Paginacion Simple', 'Segmentacion'];
+export const CONTIGUOUS_ALGORITHMS: AlgorithmOption[] = ['First Fit', 'Next Fit', 'Best Fit', 'Worst Fit', 'Buddy System'];
+export const PAGE_REPLACEMENT_ALGORITHMS: AlgorithmOption[] = ['OPT', 'FIFO', 'LRU', 'NRU', 'Segunda Oportunidad', 'Clock'];
+
+// INTERFACES
 export interface Process {
   id: string;
   name: string;
@@ -29,51 +44,51 @@ export interface MemoryBlock {
   isFree: boolean;
 }
 interface AlgorithmMeta {
-    id: AlgorithmType;
+    id: AlgorithmOption;
     name: string;
     category: 'allocation' | 'replacement' | 'advanced';
-    allocationStrategy: AllocationStrategy;
+    allocationStrategy: AllocationMode;
     requiresPageSize: boolean; // paginación necesita pageSize
     requiresSegments: boolean; // segmentación necesita tabla de segment
     splitsProcess: boolean; // ← LA CLAVE
 }
 
 // Registro central
-export const ALGORITHM_REGISTRY: Partial<Record<AlgorithmType, AlgorithmMeta>> = {
-    'first-fit': {
-        id: 'first-fit',
+export const ALGORITHM_REGISTRY: Partial<Record<AlgorithmOption, AlgorithmMeta>> = {
+    'First Fit': {
+        id: 'First Fit',
         name: 'First Fit', 
         category: 'allocation',
-        allocationStrategy: 'contiguous',
+        allocationStrategy: 'Contigua',
         requiresPageSize: false,
         requiresSegments: false,
         splitsProcess: false,
     },
-    'buddy-system': {
-        id: 'buddy-system',
+    'Buddy System': {
+        id: 'Buddy System',
         name: 'Buddy System',
         category: 'advanced',
-        allocationStrategy: 'buddy',
+        allocationStrategy: 'Contigua',
         requiresPageSize: false,
         requiresSegments: false,
         splitsProcess: false, // ← proceso = 1 bloque (aunque la memo
     },
-    'paging': {
-        id: 'paging',
+    'Paginacion Simple': {
+        id: 'Paginacion Simple',
         name: 'Paginación',
         category: 'advanced',
-        allocationStrategy: 'paged',
+        allocationStrategy: 'No contigua',
         requiresPageSize: true,
         requiresSegments: false,
         splitsProcess: true, // ← proceso = N páginas
     },
-    'segmentation': {
-        id: 'segmentation',
+    'Segmentacion': {
+        id: 'Segmentacion',
         name: 'Segmentación',
         category: 'advanced',
-        allocationStrategy: 'segmented',
+        allocationStrategy: 'Contigua',
         requiresPageSize: false,
         requiresSegments: true,
         splitsProcess: true, // ← proceso = N segmentos
     },
-} as Record<AlgorithmType, AlgorithmMeta>;;
+} as Record<AlgorithmOption, AlgorithmMeta>;;
