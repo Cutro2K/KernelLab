@@ -1,61 +1,41 @@
 import { create } from 'zustand';
-
-interface MemoryBlock {
-    id: string;
-    start: number; // dirección inicio
-    size: number; // tamaño en KB
-    process: Process | null; // null = libre
-    isFree: boolean;
-}
-
-interface Process {
-    id: string;
-    name: string;
-    size: number;
-    color: string;
-    arrivalTime: number;
-    duration: number;
-}
-
-interface SimulationStep {
-    stepNumber: number;
-    action: string; // "ALLOCATE" | "DEALLOCATE" | "PAGE_FAULT" | ...
-    description: string; // texto legible para el usuario
-    memoryState: MemoryBlock[];
-    processQueue: Process[];
-    highlights: string[]; // IDs de bloques a resaltar
-    stats: StepStats;
-}
-
-interface StepStats {
-    totalFragmentation: number;
-    externalFragmentation: number;
-    internalFragmentation: number;
-    pageFaults: number;
-    pageHits: number;
-    memoryUsage: number; // porcentaje
-}
-
-interface SimulationConfig {
-    algorithm: AlgorithmType;
-    totalMemory: number;
-    processes: Process[];
-    frames?: number; // para paginación
-    pageSize?: number;
-    referenceString?: number[]; // para reemplazo de páginas
-}
+import {type Process, type SimulationStep, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption} from '../algorithms/types';
 
 interface SimulationStore {
     algorithm: AlgorithmType | null;
+    processes: Process[] | null;
+    addProcess: (process: Process) => void;
+    removeProcess: (id: string) => void;
     memoryState: MemoryBlock[] | null;
-    currentStep: SimulationStep | null;
+    setMemoryState: (state: MemoryBlock[]) => void;
     configParams: SimulationConfig | null;
+    setConfigParams: (params: SimulationConfig) => void;
     statistics: StepStats | null;
-    setMemState: (state : MemoryBlock[]) => void;
-    setAlgorithm: (algo: AlgorithmType) => void;
-    setStep: (step: SimulationStep) => void;
-    setParams: (params : SimulationConfig) => void;
-    setStats: (stats : StepStats) => void;
+    setStatistics: (stats: StepStats) => void;
+    currentStep: number | null;
+    setCurrentStep: (step: number) => void;
+}
+
+interface ComparisonStore {
+    algorithm1: AlgorithmOption | null;
+    algorithm2: AlgorithmOption | null;
+    processes: Process[] | null;
+    addProcess: (process: Process) => void;
+    removeProcess: (id: string) => void;
+    memoryState1: MemoryBlock[] | null;
+    memoryState2: MemoryBlock[] | null;
+    setMemoryState1: (state: MemoryBlock[]) => void;
+    setMemoryState2: (state: MemoryBlock[]) => void;
+    configParams1: SimulationConfig | null;
+    configParams2: SimulationConfig | null;
+    setConfigParams1: (params: SimulationConfig) => void;
+    setConfigParams2: (params: SimulationConfig) => void;
+    statistics1: StepStats | null;
+    statistics2: StepStats | null;
+    setStatistics1: (stats: StepStats) => void;
+    setStatistics2: (stats: StepStats) => void;
+    currentStep: number | null;
+    setCurrentStep: (step: number) => void;
 }
 
 type AlgorithmType =
