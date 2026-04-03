@@ -1,7 +1,6 @@
 // IMPORTS
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS } from '../../algorithms/types';
-
 // INTERFACES
 interface AlgorithmConfigProps {
     className?: string;
@@ -57,6 +56,10 @@ export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProp
         }
     };
 
+    useEffect(() => {
+        onConfigSave({ algorithm, allocationMode });
+    }, [algorithm, allocationMode]);
+
     const manejarCambioAlgoritmo = (nuevoValor: string) => {
         setAlgoritmoSeleccionado(nuevoValor);
         if (nuevoValor === 'Paginacion Simple') {
@@ -64,13 +67,6 @@ export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProp
         } else if (nuevoValor === 'Segmentacion') {
             setReplacementAlgorithm('First Fit'); // No aplica
         }
-    };
-
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-       onConfigSave({ algorithm , allocationMode});
     };
     return (
         <div className={`flex flex-col gap-4 border-2 border-black px-4 py-3 bg-[#ffb6c1]/10 ${className || ''}`}>
@@ -124,12 +120,9 @@ export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-       onConfigSave({ totalMemory, osSize });
-    };
-
+        useEffect(() => {
+        onConfigSave({ totalMemory, osSize });
+    }, [totalMemory, osSize]);
     return (
         <div className={`flex flex-col gap-4 border-2 border-black px-4 py-3 bg-[#ffb6c1]/10 ${className || ''}`}>
             <div className="flex items-center text-slate-500 font-bold text-sm tracking-widest uppercase border-b border-slate-300 pb-1">

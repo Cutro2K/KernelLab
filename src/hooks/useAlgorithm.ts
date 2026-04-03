@@ -2,6 +2,7 @@ import { bestFitCon } from '../algorithms/allocation/bestFit';
 import { firstFitCon } from '../algorithms/allocation/firstFit';
 import { worstFitCon } from '../algorithms/allocation/worstFit';
 import { nextFitCon } from '../algorithms/allocation/nextFit';
+import { buddySystem } from '../algorithms/allocation/buddySystem';
 import { buildStepStats } from '../algorithms/stepStats';
 import {type MemoryBlock, type StepStats, type AlgorithmOption, type Process, type SimulationStep, type SimulationConfig} from '../algorithms/types';
 
@@ -59,6 +60,8 @@ export function runAllocationSimulation(algorithm: AlgorithmOption, processes: P
     steps = worstFitCon(inputProcesses, cloneMemoryState(initialState), config);
   } else if (algorithm === 'Next Fit') {
     steps = nextFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Buddy System') {
+    steps = buddySystem(inputProcesses, cloneMemoryState(initialState), config);
   }
 
   if (steps.length > 0) {
