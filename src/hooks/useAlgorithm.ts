@@ -1,0 +1,80 @@
+import { bestFitCon } from '../algorithms/allocation/bestFit';
+import { firstFitCon } from '../algorithms/allocation/firstFit';
+import { worstFitCon } from '../algorithms/allocation/worstFit';
+import { nextFitCon } from '../algorithms/allocation/nextFit';
+import {type MemoryBlock, type StepStats, type AlgorithmOption, type Process, type SimulationStep, type SimulationConfig} from '../algorithms/types';
+
+function createInitialMemoryState(totalMemory: number, osSize: number): MemoryBlock[] {
+  const normalizedTotal = Math.max(1, totalMemory);
+  const normalizedOs = Math.min(Math.max(0, osSize), normalizedTotal);
+  const freeSize = normalizedTotal - normalizedOs;
+
+  const initialState: MemoryBlock[] = [];
+
+  if (normalizedOs > 0) {
+    initialState.push({
+      id: 'os',
+      start: 0,
+      size: normalizedOs,
+      process: null,
+      isFree: false,
+    });
+  }
+
+  if (freeSize > 0) {
+    initialState.push({
+      id: 'free-0',
+      start: normalizedOs,
+      size: freeSize,
+      process: null,
+      isFree: true,
+    });
+  }
+
+  return initialState;
+}
+
+export function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
+  return state.map((block) => ({
+    ...block,
+    process: block.process ? { ...block.process } : null,
+  }));
+}
+
+export function computeStats(memoryState: MemoryBlock[], totalMemory: number): StepStats {
+  const used = memoryState.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0);
+  const freeBlocks = memoryState.filter((block) => block.isFree);
+  const totalFree = freeBlocks.reduce((sum, block) => sum + block.size, 0);
+  const largestFree = freeBlocks.reduce((max, block) => Math.max(max, block.size), 0);
+
+  return {
+    totalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
+    externalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
+    internalFragmentation: 0,
+    pageFaults: 0,
+    pageHits: 0,
+    memoryUsage: Math.round((used / Math.max(1, totalMemory)) * 100),
+  };
+}
+
+export function runAllocationSimulation(algorithm: AlgorithmOption, processes: Process[], config: SimulationConfig): SimulationStep[] {
+  const initialState = createInitialMemoryState(config.totalMemory, config.osSize ?? 0);
+  const inputProcesses = processes.map((process) => ({ ...process }));
+
+  let steps: SimulationStep[] = [];
+  if (algorithm === 'First Fit') {
+    steps = firstFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Best Fit') {
+    steps = bestFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Worst Fit') {
+    steps = worstFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Next Fit') {
+    steps = nextFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  }
+
+  if (steps.length > 0) {
+    return steps;
+  }
+
+  return [{ stepNumber: 0, memoryState: cloneMemoryState(initialState), processQueue: [], stats: computeStats(cloneMemoryState(initialState), config.totalMemory) }];
+}

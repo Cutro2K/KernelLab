@@ -2,7 +2,7 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { ProcessCard, RETRO_NEUTRAL_COLORS } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { type MemoryBlock, type Process , type QueuedProcess} from  "../algorithms/types";
+import { type MemoryBlock, type Process, type SimulationStep, type SimulationConfig, type AlgorithmOption} from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 import { useSimulationStore } from "../store/simulationStore";
@@ -42,7 +42,11 @@ export const SimProcessList = () => {
 export default function Simulator() {
   const addProcess = useSimulationStore((state) => state.addProcess);
   const processCount = useSimulationStore((state) => state.processes?.length ?? 0);
- 
+  const [steps, setSteps] = useState<SimulationStep[]>([]);
+  const [memoriaGuardada, setMemoriaGuardada] = useState<number>(0);
+  const [osGuardado, setOsGuardado] = useState<number>(0);
+  const [algorithm, setAlgorithm] = useState('First Fit');
+  const [allocationMode, setAllocationMode] = useState('Contigua');
   const handleRandomProcesses = () => {
     const totalToAdd = Math.floor(Math.random() * 5) + 3;
 
@@ -69,82 +73,24 @@ export default function Simulator() {
       addProcess(process);
     }
   };
-
   
   // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
-  const TOTAL_MEMORY = 512;
   const [isViewProces, setViewProces] = useState(false);
-  const mockMemoryState: MemoryBlock[] = [
-    {
-      id: 'block-os',
-      start: 0,
-      size: 64,
-      isFree: false,
-      process: {
-        id: 'os',
-        name: 'OS',
-        size: 64,
-        codeSize: 24,
-        dataSize: 16,
-        stackSize: 8,
-        heapSize: 16,
-        color: '#ef4444',
-        arrivalTime: 0,
-        duration: 999,
-      }
-    },
-    {
-      id: 'block-1',
-      start: 64,
-      size: 120,
-      isFree: false,
-      process: {
-        id: 'p1',
-        name: 'P1',
-        size: 120,
-        codeSize: 40,
-        dataSize: 30,
-        stackSize: 20,
-        heapSize: 30,
-        color: '#60a5fa',
-        arrivalTime: 0,
-        duration: 5,
-      }
-    },
-    {
-      id: 'block-free-1',
-      start: 184,
-      size: 100,
-      isFree: true,
-      process: null
-    },
-    {
-      id: 'block-2',
-      start: 284,
-      size: 60,
-      isFree: false,
-      process: {
-        id: 'p2',
-        name: 'P2',
-        size: 60,
-        codeSize: 18,
-        dataSize: 16,
-        stackSize: 10,
-        heapSize: 16,
-        color: '#4ade80',
-        arrivalTime: 2,
-        duration: 3,
-      }
-    },
-    {
-      id: 'block-free-2',
-      start: 344,
-      size: 168,
-      isFree: true,
-      process: null
-    }
-  ];
-  
+
+  const config: SimulationConfig = {
+      algorithm: algorithm as AlgorithmOption,
+      totalMemory: memoriaGuardada,
+      processes: useSimulationStore((state) => state.processes) ?? [],
+      osSize: osGuardado,
+    };
+
+  useSimulationStore.setState((prevState) => ({
+        ...prevState,
+        allocationStrategy: allocationMode,
+        algorithm : algorithm as AlgorithmOption,
+        currentStep: 0,
+        configParams : config
+      }));
   return (
     
     <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
@@ -173,8 +119,18 @@ export default function Simulator() {
 
         <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; CONFIGURACIÓN</h1>
 
-        <MemoryConfig />
-        <AlgorithmConfig />
+        <MemoryConfig 
+        onConfigSave={({ totalMemory, osSize }) => {
+          setMemoriaGuardada(totalMemory);
+          setOsGuardado(osSize);
+        }} 
+        />
+        <AlgorithmConfig 
+        onConfigSave={({ algorithm , allocationMode}) => {
+          setAlgorithm(algorithm);
+          setAllocationMode(allocationMode);
+        }} 
+        />
         
         <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; VISUALIZACIÓN DE MEMORIA</h1>
         
@@ -183,9 +139,6 @@ export default function Simulator() {
         <div className="w-full px-2 lg:px-6 overflow-x-auto">
           <MemoryMap
             className="mx-auto"
-            memoryState={mockMemoryState} 
-            totalMemory={TOTAL_MEMORY} 
-            algorithmId="First Fit" 
           />      
         </div>
         

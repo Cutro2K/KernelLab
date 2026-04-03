@@ -1,21 +1,18 @@
 import { calculateStats } from '../../utils/helpers';
 import { MemoryBlock } from './MemoryBlock';
 import { type MemoryBlock as MemoryBlockType,type AlgorithmOption } from '../../algorithms/types';
-import { ALGORITHM_REGISTRY } from '../../algorithms/types'; // Asumiendo que exportas el registro de tu Doc 1
+import { useSimulationStore } from '../../store/simulationStore';
 
 interface MemoryMapProps {
   className?: string;
-  memoryState: MemoryBlockType[];
-  totalMemory: number;
-  algorithmId: AlgorithmOption;
-  pageTable?: any[]; 
-  segmentTable?: any[];
 }
 
-export function MemoryMap({ memoryState, totalMemory, algorithmId, pageTable, segmentTable, className = '', }: MemoryMapProps) {
-  const meta = ALGORITHM_REGISTRY[algorithmId];
+export function MemoryMap({className = '', }: MemoryMapProps) {
+  const memoryState = useSimulationStore((state) => state.memoryState);
+  const totalMemory = useSimulationStore((state) => state.configParams?.totalMemory) ?? 0;
+  const algorithmId = useSimulationStore((state) => state.algorithm);
 
-    if (!meta) {
+  if (memoryState === null) {
     return (
       <div className="flex items-center justify-center w-full h-[600px] bg-gray-100 border-2 border-dashed border-gray-400 rounded-md text-gray-500 font-mono">
         ⚠️ El algoritmo "{algorithmId}" todavía no está en el registro.

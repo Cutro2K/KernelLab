@@ -38,11 +38,6 @@ export interface Process {
   duration: number;
 }
 
-export interface QueuedProcess {
-  process : Process;
-  status: 'ejecucion' | 'espera' | 'finalizado';
-  progress?: number;  
-}
 
 export interface MemoryBlock {
   id: string;
@@ -105,43 +100,3 @@ export interface SimulationStore {
     setParams: (params : SimulationConfig) => void;
     setStats: (stats : StepStats) => void;
 }
-
-// Registro central
-export const ALGORITHM_REGISTRY: Partial<Record<AlgorithmOption, AlgorithmMeta>> = {
-    'First Fit': {
-        id: 'First Fit',
-        name: 'First Fit', 
-        category: 'allocation',
-        allocationStrategy: 'Contigua',
-        requiresPageSize: false,
-        requiresSegments: false,
-        splitsProcess: false,
-    },
-    'Buddy System': {
-        id: 'Buddy System',
-        name: 'Buddy System',
-        category: 'advanced',
-        allocationStrategy: 'Contigua',
-        requiresPageSize: false,
-        requiresSegments: false,
-        splitsProcess: false, // ← proceso = 1 bloque (aunque la memo
-    },
-    'Paginacion Simple': {
-        id: 'Paginacion Simple',
-        name: 'Paginación',
-        category: 'advanced',
-        allocationStrategy: 'No contigua',
-        requiresPageSize: true,
-        requiresSegments: false,
-        splitsProcess: true, // ← proceso = N páginas
-    },
-    'Segmentacion': {
-        id: 'Segmentacion',
-        name: 'Segmentación',
-        category: 'advanced',
-        allocationStrategy: 'Contigua',
-        requiresPageSize: false,
-        requiresSegments: true,
-        splitsProcess: true, // ← proceso = N segmentos
-    },
-} as Record<AlgorithmOption, AlgorithmMeta>;;

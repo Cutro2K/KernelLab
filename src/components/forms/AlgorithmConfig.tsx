@@ -1,13 +1,16 @@
 // IMPORTS
 import { useState } from "react";
-import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS } from '../../algorithms/types';
+import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS, type AlgorithmOption } from '../../algorithms/types';
 
 // INTERFACES
-interface ConfigAlgorithmProps {
+interface AlgorithmConfigProps {
     className?: string;
+    onConfigSave: (algorithmData: { algorithm: string; allocationMode: string }) => void;
 }
-interface ConfigMemoryProps {
+
+interface MemoryConfigProps {
     className?: string;
+    onConfigSave: (memoryData: { totalMemory: number; osSize: number }) => void;
 }
 
 function SelectRetroNativo({ value, options, onChange }: { value: string, options: string[], onChange: (val: string) => void }) {
@@ -39,9 +42,9 @@ function SelectRetroNativo({ value, options, onChange }: { value: string, option
     );
 }
 
-export function AlgorithmConfig({ className }: ConfigAlgorithmProps) {
-    const [AllocationStrategySeleccionada, setAllocationStrategy] = useState('Contigua');
-    const [algoritmoSeleccionado, setAlgoritmoSeleccionado] = useState('First Fit');
+export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProps) {
+    const [allocationMode, setAllocationStrategy] = useState('Contigua');
+    const [algorithm, setAlgoritmoSeleccionado] = useState('First Fit');
     const [replacementAlgorithm, setReplacementAlgorithm] = useState('FIFO');
 
     const manejarCambioDisposicion = (nuevoValor: string) => {
@@ -61,8 +64,14 @@ export function AlgorithmConfig({ className }: ConfigAlgorithmProps) {
         } else if (nuevoValor === 'Segmentacion') {
             setReplacementAlgorithm('First Fit'); // No aplica
         }
-    }
-  
+    };
+
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+       onConfigSave({ algorithm , allocationMode});
+    };
     return (
         <div className={`flex flex-col gap-4 border-2 border-black px-4 py-3 bg-[#ffb6c1]/10 ${className || ''}`}>
             <div className="flex items-center text-slate-500 font-bold text-sm tracking-widest uppercase border-b border-slate-300 pb-1">
@@ -73,7 +82,7 @@ export function AlgorithmConfig({ className }: ConfigAlgorithmProps) {
             <div className="flex items-center gap-3">
                 <label className="font-bold text-sm min-w-[150px]">Tipo de asignacion: </label>
                 <SelectRetroNativo 
-                    value={AllocationStrategySeleccionada} 
+                    value={allocationMode} 
                     options={ALLOCATIONS as string[]} 
                     onChange={manejarCambioDisposicion} 
                 />
@@ -82,18 +91,18 @@ export function AlgorithmConfig({ className }: ConfigAlgorithmProps) {
             <div className="flex items-center gap-3">
                 <label className="font-bold text-sm min-w-[150px]">Sub algoritmo: </label>
                 <SelectRetroNativo 
-                    value={algoritmoSeleccionado} 
-                    options={AllocationStrategySeleccionada === 'Contigua' ? CONTIGUOUS_ALGORITHMS as string[] : NON_CONTIGUOUS_ALGORITHMS as string[]} 
+                    value={algorithm} 
+                    options={allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS as string[] : NON_CONTIGUOUS_ALGORITHMS as string[]} 
                     onChange={manejarCambioAlgoritmo} 
                 />
             </div>
 
-            {AllocationStrategySeleccionada === 'No contigua' && (
+            {allocationMode === 'No contigua' && (
                 <div className="flex items-center gap-3">    
                     <label className="font-bold text-sm min-w-[150px]">Reemplazo de páginas: </label>
                     <SelectRetroNativo 
                         value={replacementAlgorithm} 
-                        options={algoritmoSeleccionado === 'Paginacion Simple' ? PAGE_REPLACEMENT_ALGORITHMS as string[] : CONTIGUOUS_ALGORITHMS as string[]} 
+                        options={algorithm === 'Paginacion Simple' ? PAGE_REPLACEMENT_ALGORITHMS as string[] : CONTIGUOUS_ALGORITHMS as string[]} 
                         onChange={(val) => setReplacementAlgorithm(val)} 
                     />
                 </div>
@@ -102,9 +111,9 @@ export function AlgorithmConfig({ className }: ConfigAlgorithmProps) {
     );
 }
 
-export function MemoryConfig({ className }: ConfigMemoryProps) {
+export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
     const [exponente, setExponente] = useState(9);
-    const memoriaReal = 2 ** exponente;
+    const totalMemory = 2 ** exponente;
     const [osSize, setOsSize] = useState(64);
 
     const manejarCambioExponente = (e : React.ChangeEvent<HTMLInputElement>) => {
@@ -114,6 +123,13 @@ export function MemoryConfig({ className }: ConfigMemoryProps) {
             setOsSize(2 ** (nuevoExponente - 1));
         }
     };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+       onConfigSave({ totalMemory, osSize });
+    };
+
     return (
         <div className={`flex flex-col gap-4 border-2 border-black px-4 py-3 bg-[#ffb6c1]/10 ${className || ''}`}>
             <div className="flex items-center text-slate-500 font-bold text-sm tracking-widest uppercase border-b border-slate-300 pb-1">
@@ -132,7 +148,7 @@ export function MemoryConfig({ className }: ConfigMemoryProps) {
                     onChange={manejarCambioExponente}
                     className="accent-black cursor-pointer"
                 />
-                <span className="font-mono bg-white border border-black px-1">{memoriaReal}KB</span>
+                <span className="font-mono bg-white border border-black px-1">{totalMemory}KB</span>
             </div>
 
             <div className="flex flex-row items-center gap-4 text-sm">
@@ -140,7 +156,7 @@ export function MemoryConfig({ className }: ConfigMemoryProps) {
                 <input 
                     type="range"
                     min="32" 
-                    max={memoriaReal / 2}
+                    max={totalMemory / 2}
                     step="16"
                     value={osSize}
                     onChange={(e) => setOsSize(parseInt(e.target.value))}
