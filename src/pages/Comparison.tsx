@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useStepController } from '../hooks/useStepController';
 import { StepControls } from '../components/visualization/StepControls';
 import { AddProcessButton } from '../components/visualization/AddProcessButton';
+import { Tooltip } from '../components/ui/Tooltip';
 
 type AlgorithmMetrics = {
   usage: number;
@@ -111,14 +112,36 @@ const ALGORITHM_STYLES: Record<AlgorithmOption, { fill: string; pattern: string;
 type DisplayBlock = {
   id: string;
   label: string;
+  compactLabel: string;
+  tooltipLabel: string;
   size: number;
   color?: string;
   isFree: boolean;
 };
 
-function AnimatedPreviewBlock({ block, previewTotal }: { block: DisplayBlock; previewTotal: number }) {
+function AnimatedPreviewBlock({
+  block,
+  previewTotal,
+  isLast,
+}: {
+  block: DisplayBlock;
+  previewTotal: number;
+  isLast: boolean;
+}) {
   const previousIsFree = useRef(block.isFree);
   const [releasePulse, setReleasePulse] = useState(false);
+  const widthPercent = (block.size / previewTotal) * 100;
+  const showFullLabel = widthPercent >= 9;
+  const showCompactLabel = widthPercent >= 4.5;
+  const compactLabel = block.compactLabel;
+  const tooltipContent = (
+    <div className="space-y-1">
+      <div className="text-[11px] font-black uppercase tracking-wide">{block.isFree ? 'Bloque libre' : 'Bloque ocupado'}</div>
+      <div>ID: {block.compactLabel}</div>
+      <div>Detalle: {block.label}</div>
+      <div>Tamano: {block.size}KB</div>
+    </div>
+  );
 
   useEffect(() => {
     const wasReleased = !previousIsFree.current && block.isFree;
@@ -139,7 +162,8 @@ function AnimatedPreviewBlock({ block, previewTotal }: { block: DisplayBlock; pr
   }, [block.isFree]);
 
   return (
-    <motion.div
+    <Tooltip content={tooltipContent} wrapperClassName="contents">
+      <motion.div
       layout
       initial={{ opacity: 0, y: 8, scaleY: 0.92 }}
       animate={{
@@ -165,19 +189,30 @@ function AnimatedPreviewBlock({ block, previewTotal }: { block: DisplayBlock; pr
         boxShadow: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
         filter: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
       }}
-      className={`relative flex min-h-18 items-center justify-center border-r-2 border-[#111] px-2 py-2 text-center font-black last:border-r-0 ${
+      className={`relative flex min-h-18 items-center justify-center border-[#111] py-2 text-center font-black ${
+        isLast ? 'border-r-0' : 'border-r-2'
+      } ${
+        showFullLabel ? 'px-2' : showCompactLabel ? 'px-1' : 'px-0'
+      } ${
         block.isFree ? 'bg-white text-[#4b5563]' : 'text-white'
       }`}
       style={{
-        width: `${(block.size / previewTotal) * 100}%`,
+        width: `${widthPercent}%`,
         backgroundColor: block.isFree ? undefined : block.color,
       }}
     >
-      <div className="flex flex-col items-center leading-tight">
-        <span className="text-xs uppercase">{block.label}</span>
-        <span className="text-[11px] font-bold">{block.size}KB</span>
+      <div className="w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight">
+        {showFullLabel ? (
+          <div className="flex flex-col items-center">
+            <span className="w-full truncate text-xs uppercase">{block.label}</span>
+            <span className="w-full truncate text-[11px] font-bold">{block.size}KB</span>
+          </div>
+        ) : showCompactLabel ? (
+          <span className="text-[10px] uppercase">{compactLabel}</span>
+        ) : null}
       </div>
-    </motion.div>
+      </motion.div>
+    </Tooltip>
   );
 }
 
@@ -188,7 +223,21 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
     sourceBlocks.length > 0
       ? sourceBlocks.map((block) => ({
           id: block.id,
-          label: block.isFree ? 'LIBRE' : block.process?.name ?? 'OS',
+          label: block.isFree
+            ? 'LIBRE'
+            : block.process?.parentProcessId && block.process.pageIndex !== undefined
+              ? `${block.process.parentProcessId} ${block.process.segmentType ?? 'SEG'} P${block.process.pageIndex + 1}`
+              : block.process?.name ?? 'OS',
+          compactLabel: block.isFree
+            ? 'L'
+            : block.process?.parentProcessId && block.process.pageIndex !== undefined
+              ? `${block.process.parentProcessId}-P${block.process.pageIndex + 1}`
+              : (block.process?.name ?? 'OS').slice(0, 2).toUpperCase(),
+          tooltipLabel: block.isFree
+            ? `LIBRE - ${block.size}KB`
+            : block.process?.parentProcessId && block.process.pageIndex !== undefined
+              ? `${block.process.parentProcessId} | ${block.process.segmentType ?? 'SEG'} | Pag ${block.process.pageIndex + 1} | ${block.size}KB`
+              : `${block.process?.name ?? 'OS'} - ${block.size}KB`,
           size: block.size,
           color: block.process?.color ?? '#4b5563',
           isFree: block.isFree,
@@ -197,6 +246,8 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
           {
             id: 'free-all',
             label: 'LIBRE',
+            compactLabel: 'L',
+            tooltipLabel: `LIBRE - ${normalizedTotalMemory}KB`,
             size: normalizedTotalMemory,
             isFree: true,
           },
@@ -207,6 +258,8 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
     displayBlocks.push({
       id: 'free-remainder',
       label: 'LIBRE',
+      compactLabel: 'L',
+      tooltipLabel: `LIBRE - ${normalizedTotalMemory - usedSize}KB`,
       size: normalizedTotalMemory - usedSize,
       isFree: true,
     });
@@ -221,11 +274,12 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
     <div className="mt-4 border-2 border-[#111] bg-white p-3">
       <div className="flex w-full overflow-hidden border-2 border-[#111] bg-[#f8f8f8]">
         <AnimatePresence initial={false} mode="popLayout">
-          {displayBlocks.map((block) => (
+          {displayBlocks.map((block, index) => (
             <AnimatedPreviewBlock
               key={block.id}
               block={block}
               previewTotal={previewTotal}
+              isLast={index === displayBlocks.length - 1}
             />
           ))}
         </AnimatePresence>
@@ -427,7 +481,11 @@ export const CompProcessList = () => {
                 <ProcessCard key={process.id} 
                 id={process.id} 
                 name={process.name} 
-                color={process.color} 
+                color={process.color}
+                codeArrivalTime={process.codeArrivalTime}
+                stackArrivalTime={process.stackArrivalTime}
+                dataArrivalTime={process.dataArrivalTime}
+                heapArrivalTime={process.heapArrivalTime}
                 codeSize={process.codeSize}
                 dataSize={process.dataSize}
                 arrivalTime={process.arrivalTime} 
@@ -602,15 +660,23 @@ export default function Comparison() {
       const dataSize = Math.floor(Math.random() * 40) + 10;
       const stackSize = Math.floor(Math.random() * 30) + 8;
       const heapSize = Math.floor(Math.random() * 50) + 12;
+      const heapArrivalTime = Math.floor(Math.random() * 20);
+      const stackArrivalTime = Math.floor(Math.random() * 5);
+      const dataArrivalTime = Math.floor(Math.random() * 10);
+      const codeArrivalTime = Math.floor(Math.random() * 15);
 
       const process: Process = {
         id: `P${processNumber}`,
         name: `Proceso ${processNumber}`,
+        size: codeSize + dataSize + stackSize + heapSize,
         codeSize,
         dataSize,
         stackSize,
         heapSize,
-        size: codeSize + dataSize + stackSize + heapSize,
+        codeArrivalTime,
+        stackArrivalTime,
+        dataArrivalTime,
+        heapArrivalTime,
         arrivalTime: Math.floor(Math.random() * 20),
         duration: Math.floor(Math.random() * 50) + 10,
         color: RETRO_NEUTRAL_COLORS[Math.floor(Math.random() * RETRO_NEUTRAL_COLORS.length)],

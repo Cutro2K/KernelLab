@@ -33,10 +33,25 @@ export interface Process {
   stackSize: number;
   dataSize: number;
   heapSize: number;
+  codeArrivalTime: number;
+  stackArrivalTime: number;
+  dataArrivalTime: number;
+  heapArrivalTime: number;
   color: string;
   arrivalTime: number;
   duration: number;
+  parentProcessId?: string;
+  segmentId?: string;
+  segmentType?: SegmentType;
+  pageIndex?: number;
 }
+
+export type SegmentType = 'Stack' | 'Heap' | 'Data' | 'Code';
+
+export interface Segment extends Process {
+    parentId: number;
+    segmentNumber: number;
+} 
 
 
 export interface MemoryBlock {

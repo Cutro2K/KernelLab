@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom';
 interface TooltipProps {
   content: ReactNode;
   children: ReactNode;
+  wrapperClassName?: string;
 }
 
-export function Tooltip({ content, children }: TooltipProps) {
+export function Tooltip({ content, children, wrapperClassName = 'relative inline-block' }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -33,7 +34,7 @@ export function Tooltip({ content, children }: TooltipProps) {
   const tooltipElement = (
     <div
       ref={tooltipRef}
-      className="fixed z-9999 pointer-events-none whitespace-nowrap bg-[#111] text-[#ececec] px-3 py-2 border-2 border-[#111] shadow-[4px_4px_0_rgba(0,0,0,0.3)] text-sm font-semibold transition-opacity duration-150"
+      className="fixed z-9999 pointer-events-none max-w-72 whitespace-normal bg-[#111] text-[#ececec] px-3 py-2 border-2 border-[#111] shadow-[4px_4px_0_rgba(0,0,0,0.3)] text-xs font-semibold leading-snug transition-opacity duration-150"
       style={{
         top: `${coords.top}px`,
         left: `${coords.left}px`,
@@ -49,7 +50,7 @@ export function Tooltip({ content, children }: TooltipProps) {
     <>
       <div
         ref={triggerRef}
-        className="relative inline-block"
+        className={wrapperClassName}
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onMouseMove={handleMouseMove}

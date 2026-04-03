@@ -6,12 +6,22 @@ export function buildStepStats(memoryState: MemoryBlock[], totalMemory: number):
   const totalFree = freeBlocks.reduce((sum, block) => sum + block.size, 0);
   const largestFree = freeBlocks.reduce((max, block) => Math.max(max, block.size), 0);
   const fragmentedFree = totalFree > 0 ? totalFree - largestFree : 0;
+  const isPagingLayout = memoryState.some((block) => block.id.startsWith('frame-'));
+  const effectiveExternalFragmentation = isPagingLayout ? 0 : fragmentedFree;
+  const internalWaste = memoryState.reduce((sum, block) => {
+    if (block.isFree || !block.process) {
+      return sum;
+    }
+
+    const usedInBlock = Math.max(0, Math.min(block.size, block.process.size));
+    return sum + (block.size - usedInBlock);
+  }, 0);
   const normalizedTotalMemory = Math.max(1, totalMemory);
 
   return {
-    totalFragmentation: fragmentedFree,
-    externalFragmentation: Math.round((fragmentedFree / normalizedTotalMemory) * 100),
-    internalFragmentation: 0,
+    totalFragmentation: effectiveExternalFragmentation,
+    externalFragmentation: Math.round((effectiveExternalFragmentation / normalizedTotalMemory) * 100),
+    internalFragmentation: Math.round((internalWaste / normalizedTotalMemory) * 100),
     pageFaults: 0,
     pageHits: 0,
     memoryUsage: Math.round((used / normalizedTotalMemory) * 100),
