@@ -60,6 +60,7 @@ export default function Simulator() {
   const [algorithm, setAlgorithm] = useState<AlgorithmOption>('First Fit');
   const [segmentationStrategy, setSegmentationStrategy] = useState<'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit'>('First Fit');
   const [allocationMode, setAllocationMode] = useState('Contigua');
+  const [pageSize, setPageSize] = useState<number>(16);
   const [autoPlayPending, setAutoPlayPending] = useState(false);
   const maxStep = Math.max(0, steps.length - 1);
   const {
@@ -117,6 +118,7 @@ export default function Simulator() {
       totalMemory: memoriaGuardada,
       processes,
       osSize: osGuardado,
+      pageSize: PAGING_ALGORITHMS.includes(algorithm) ? pageSize : undefined,
       segmentationStrategy: algorithm === 'Segmentacion' ? segmentationStrategy : undefined,
     };
 
@@ -170,7 +172,7 @@ export default function Simulator() {
     pause();
     setStoreCurrentStep(0);
     setSteps([]);
-  }, [algorithm, segmentationStrategy, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
+  }, [algorithm, segmentationStrategy, allocationMode, memoriaGuardada, osGuardado, pageSize, processes.length, pause, setStoreCurrentStep]);
 
   const occupiedMemory = memoryState?.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0) ?? 0;
   const freeMemory = Math.max(0, memoriaGuardada - occupiedMemory);
@@ -219,11 +221,15 @@ export default function Simulator() {
         }} 
         />
         <AlgorithmConfig 
-        onConfigSave={({ algorithm , allocationMode, replacementAlgorithm}) => {
+        totalMemory={memoriaGuardada}
+        onConfigSave={({ algorithm , allocationMode, replacementAlgorithm, pageSize }) => {
           const selectedAlgorithm = allocationMode === 'No contigua' && algorithm === 'Paginacion Simple'
             ? replacementAlgorithm
             : algorithm;
           setAlgorithm(selectedAlgorithm as AlgorithmOption);
+          if (pageSize !== undefined) {
+            setPageSize(pageSize);
+          }
           if (algorithm === 'Segmentacion') {
             setSegmentationStrategy(replacementAlgorithm as 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit');
           }

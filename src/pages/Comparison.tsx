@@ -302,6 +302,8 @@ function SimulatorPanel({
   onSegmentationStrategyChange,
   memoryExponent,
   onMemoryExponentChange,
+  pageSizeExponent,
+  onPageSizeExponentChange,
   osSize,
   onOsSizeChange,
   memoryState,
@@ -321,6 +323,8 @@ function SimulatorPanel({
   onSegmentationStrategyChange: (next: AlgorithmOption) => void;
   memoryExponent: number;
   onMemoryExponentChange: (next: number) => void;
+  pageSizeExponent: number;
+  onPageSizeExponentChange: (next: number) => void;
   osSize: number;
   onOsSizeChange: (next: number) => void;
   memoryState: MemoryBlock[] | null;
@@ -338,6 +342,9 @@ function SimulatorPanel({
   const showReplacementSelector = subAlgorithm === 'Paginacion Simple';
   const showSegmentationSelector = subAlgorithm === 'Segmentacion';
   const memorySize = 2 ** memoryExponent;
+  const maxPageSizeExponent = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(memorySize / 2)))));
+  const safePageSizeExponent = Math.min(pageSizeExponent, maxPageSizeExponent);
+  const pageSize = 2 ** safePageSizeExponent;
 
   return (
     <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.1)]">
@@ -437,6 +444,22 @@ function SimulatorPanel({
               />
               <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{osSize}KB</span>
             </div>
+
+            {showReplacementSelector && (
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <span className="min-w-35">Tamaño de página:</span>
+                <input
+                  type="range"
+                  min={2}
+                  max={maxPageSizeExponent}
+                  step={1}
+                  value={safePageSizeExponent}
+                  onChange={(event) => onPageSizeExponentChange(Number(event.target.value))}
+                  className="accent-black"
+                />
+                <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{pageSize}KB</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -516,6 +539,8 @@ export default function Comparison() {
   const [rightSegmentationStrategy, setRightSegmentationStrategy] = useState<SegmentationStrategy>('Best Fit');
   const [leftMemoryExponent, setLeftMemoryExponent] = useState(9);
   const [rightMemoryExponent, setRightMemoryExponent] = useState(9);
+  const [leftPageSizeExponent, setLeftPageSizeExponent] = useState(4);
+  const [rightPageSizeExponent, setRightPageSizeExponent] = useState(4);
   const [leftOsSize, setLeftOsSize] = useState(64);
   const [rightOsSize, setRightOsSize] = useState(64);
   const [leftSteps, setLeftSteps] = useState<SimulationStep[]>([]);
@@ -535,11 +560,19 @@ export default function Comparison() {
   const handleLeftMemoryExponentChange = (next: number) => {
     setLeftMemoryExponent(next);
     setLeftOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
+    setLeftPageSizeExponent((prev) => {
+      const nextMax = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
+      return Math.min(prev, nextMax);
+    });
   };
 
   const handleRightMemoryExponentChange = (next: number) => {
     setRightMemoryExponent(next);
     setRightOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
+    setRightPageSizeExponent((prev) => {
+      const nextMax = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
+      return Math.min(prev, nextMax);
+    });
   };
 
   useEffect(() => {
@@ -563,6 +596,8 @@ export default function Comparison() {
     rightSegmentationStrategy,
     leftMemoryExponent,
     rightMemoryExponent,
+    leftPageSizeExponent,
+    rightPageSizeExponent,
     leftOsSize,
     rightOsSize,
     processes,
@@ -692,12 +727,15 @@ export default function Comparison() {
   const handleStartComparison = () => {
     const leftTotalMemory = 2 ** leftMemoryExponent;
     const rightTotalMemory = 2 ** rightMemoryExponent;
+    const leftPageSize = 2 ** Math.min(leftPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(leftTotalMemory / 2))))));
+    const rightPageSize = 2 ** Math.min(rightPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(rightTotalMemory / 2))))));
 
     const leftConfig: SimulationConfig = {
       algorithm: leftSimulationAlgorithm,
       totalMemory: leftTotalMemory,
       processes,
       osSize: leftOsSize,
+      pageSize: leftSubAlgorithm === 'Paginacion Simple' ? leftPageSize : undefined,
       segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
     };
 
@@ -706,6 +744,7 @@ export default function Comparison() {
       totalMemory: rightTotalMemory,
       processes,
       osSize: rightOsSize,
+      pageSize: rightSubAlgorithm === 'Paginacion Simple' ? rightPageSize : undefined,
       segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
     };
 
@@ -813,6 +852,8 @@ export default function Comparison() {
             }}
             memoryExponent={leftMemoryExponent}
             onMemoryExponentChange={handleLeftMemoryExponentChange}
+            pageSizeExponent={leftPageSizeExponent}
+            onPageSizeExponentChange={setLeftPageSizeExponent}
             osSize={leftOsSize}
             onOsSizeChange={setLeftOsSize}
             memoryState={leftMemoryState}
@@ -842,6 +883,8 @@ export default function Comparison() {
             }}
             memoryExponent={rightMemoryExponent}
             onMemoryExponentChange={handleRightMemoryExponentChange}
+            pageSizeExponent={rightPageSizeExponent}
+            onPageSizeExponentChange={setRightPageSizeExponent}
             osSize={rightOsSize}
             onOsSizeChange={setRightOsSize}
             memoryState={rightMemoryState}

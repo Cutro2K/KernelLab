@@ -5,7 +5,8 @@ import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGO
 // INTERFACES
 interface AlgorithmConfigProps {
     className?: string;
-    onConfigSave: (algorithmData: { algorithm: string; allocationMode: string; replacementAlgorithm: string }) => void;
+    totalMemory: number;
+    onConfigSave: (algorithmData: { algorithm: string; allocationMode: string; replacementAlgorithm: string; pageSize?: number }) => void;
 }
 
 interface MemoryConfigProps {
@@ -42,10 +43,21 @@ function SelectRetroNativo({ value, options, onChange }: { value: string, option
     );
 }
 
-export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProps) {
+export function AlgorithmConfig({ className, totalMemory, onConfigSave }: AlgorithmConfigProps) {
     const [allocationMode, setAllocationStrategy] = useState('Contigua');
     const [algorithm, setAlgoritmoSeleccionado] = useState('First Fit');
     const [replacementAlgorithm, setReplacementAlgorithm] = useState('FIFO');
+    const [pageSizeExponent, setPageSizeExponent] = useState(4);
+    const maxPageSize = Math.max(4, Math.floor(totalMemory / 2));
+    const maxPageSizeExponent = Math.max(2, Math.floor(Math.log2(maxPageSize)));
+    const pageSize = 2 ** pageSizeExponent;
+    const showPageSizeSlider = allocationMode === 'No contigua' && algorithm === 'Paginacion Simple';
+
+    useEffect(() => {
+        if (pageSizeExponent > maxPageSizeExponent) {
+            setPageSizeExponent(maxPageSizeExponent);
+        }
+    }, [maxPageSizeExponent, pageSizeExponent]);
 
     const manejarCambioDisposicion = (nuevoValor: string) => {
         setAllocationStrategy(nuevoValor);
@@ -58,8 +70,13 @@ export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProp
     };
 
     useEffect(() => {
-        onConfigSave({ algorithm, allocationMode, replacementAlgorithm });
-    }, [algorithm, allocationMode, replacementAlgorithm, onConfigSave]);
+        onConfigSave({
+            algorithm,
+            allocationMode,
+            replacementAlgorithm,
+            pageSize: showPageSizeSlider ? pageSize : undefined,
+        });
+    }, [algorithm, allocationMode, replacementAlgorithm, pageSize, showPageSizeSlider, onConfigSave]);
 
     const manejarCambioAlgoritmo = (nuevoValor: string) => {
         setAlgoritmoSeleccionado(nuevoValor);
@@ -102,6 +119,22 @@ export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProp
                         options={algorithm === 'Paginacion Simple' ? PAGE_REPLACEMENT_ALGORITHMS as string[] : CONTIGUOUS_ALGORITHMS as string[]} 
                         onChange={(val) => setReplacementAlgorithm(val)} 
                     />
+                </div>
+            )}
+
+            {showPageSizeSlider && (
+                <div className="flex flex-row items-center gap-4 text-sm">
+                    <label className="font-bold min-w-[150px]">Tamaño de página: </label>
+                    <input
+                        type="range"
+                        min="2"
+                        max={maxPageSizeExponent}
+                        step="1"
+                        value={pageSizeExponent}
+                        onChange={(e) => setPageSizeExponent(Number(e.target.value))}
+                        className="accent-black cursor-pointer"
+                    />
+                    <span className="font-mono bg-white border border-black px-1">{pageSize}KB</span>
                 </div>
             )}
         </div>
