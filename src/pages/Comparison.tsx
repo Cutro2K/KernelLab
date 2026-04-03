@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ProcessCard, RETRO_NEUTRAL_COLORS } from '../components/visualization/ProcessCard';
 import { Button } from '../components/ui/Button';
 import { useComparisonStore } from '../store/simulationStore';
@@ -8,8 +8,11 @@ import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 import { type Process } from '../algorithms/types';
 import { type MemoryBlock } from '../algorithms/types';
-import { type SimulationStep, type SimulationConfig, type StepStats } from '../algorithms/types';
+import { type SimulationStep, type SimulationConfig } from '../algorithms/types';
 import {computeStats, runAllocationSimulation, cloneMemoryState} from '../hooks/useAlgorithm';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useStepController } from '../hooks/useStepController';
+import { StepControls } from '../components/visualization/StepControls';
 
 type AlgorithmMetrics = {
   usage: number;
@@ -112,6 +115,71 @@ type DisplayBlock = {
   isFree: boolean;
 };
 
+function AnimatedPreviewBlock({ block, previewTotal }: { block: DisplayBlock; previewTotal: number }) {
+  const previousIsFree = useRef(block.isFree);
+  const [releasePulse, setReleasePulse] = useState(false);
+
+  useEffect(() => {
+    const wasReleased = !previousIsFree.current && block.isFree;
+    previousIsFree.current = block.isFree;
+
+    if (!wasReleased) {
+      return;
+    }
+
+    setReleasePulse(true);
+    const timeoutId = window.setTimeout(() => {
+      setReleasePulse(false);
+    }, 440);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [block.isFree]);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8, scaleY: 0.92 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scaleY: 1,
+        boxShadow: releasePulse
+          ? [
+              'inset 0 0 0 rgba(34,197,94,0)',
+              'inset 0 0 0 4px rgba(34,197,94,0.55)',
+              'inset 0 0 0 rgba(34,197,94,0)',
+            ]
+          : 'inset 0 0 0 rgba(34,197,94,0)',
+        filter: releasePulse
+          ? ['saturate(1)', 'saturate(1.3)', 'saturate(1)']
+          : 'saturate(1)',
+      }}
+      exit={{ opacity: 0, y: -8, scaleY: 0.92 }}
+      transition={{
+        duration: 0.24,
+        ease: 'easeOut',
+        layout: { duration: 0.28 },
+        boxShadow: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
+        filter: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
+      }}
+      className={`relative flex min-h-18 items-center justify-center border-r-2 border-[#111] px-2 py-2 text-center font-black last:border-r-0 ${
+        block.isFree ? 'bg-white text-[#4b5563]' : 'text-white'
+      }`}
+      style={{
+        width: `${(block.size / previewTotal) * 100}%`,
+        backgroundColor: block.isFree ? undefined : block.color,
+      }}
+    >
+      <div className="flex flex-col items-center leading-tight">
+        <span className="text-xs uppercase">{block.label}</span>
+        <span className="text-[11px] font-bold">{block.size}KB</span>
+      </div>
+    </motion.div>
+  );
+}
+
 function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[] | null; totalMemory: number }) {
   const normalizedTotalMemory = Math.max(1, totalMemory);
   const sourceBlocks = memoryState ?? [];
@@ -143,26 +211,23 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
     });
   }
 
+  const previewTotal = Math.max(
+    1,
+    displayBlocks.reduce((sum, block) => sum + block.size, 0),
+  );
+
   return (
     <div className="mt-4 border-2 border-[#111] bg-white p-3">
       <div className="flex w-full overflow-hidden border-2 border-[#111] bg-[#f8f8f8]">
-        {displayBlocks.map((block) => (
-          <div
-            key={block.id}
-            className={`relative flex min-h-18 items-center justify-center border-r-2 border-[#111] px-2 py-2 text-center font-black last:border-r-0 ${
-              block.isFree ? 'bg-white text-[#4b5563]' : 'text-white'
-            }`}
-            style={{
-              width: `${Math.max(8, (block.size / normalizedTotalMemory) * 100)}%`,
-              backgroundColor: block.isFree ? undefined : block.color,
-            }}
-          >
-            <div className="flex flex-col items-center leading-tight">
-              <span className="text-xs uppercase">{block.label}</span>
-              <span className="text-[11px] font-bold">{block.size}KB</span>
-            </div>
-          </div>
-        ))}
+        <AnimatePresence initial={false} mode="popLayout">
+          {displayBlocks.map((block) => (
+            <AnimatedPreviewBlock
+              key={block.id}
+              block={block}
+              previewTotal={previewTotal}
+            />
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -362,9 +427,12 @@ export const CompProcessList = () => {
                 id={process.id} 
                 name={process.name} 
                 color={process.color} 
+                codeSize={process.codeSize}
+                dataSize={process.dataSize}
                 arrivalTime={process.arrivalTime} 
                 duration={process.duration}
-                stackSize={process.stackSize} />
+                stackSize={process.stackSize}
+                heapSize={process.heapSize} />
               ))}
             </div>);
 }
@@ -394,9 +462,19 @@ export default function Comparison() {
   const [rightMemoryExponent, setRightMemoryExponent] = useState(9);
   const [leftOsSize, setLeftOsSize] = useState(64);
   const [rightOsSize, setRightOsSize] = useState(64);
-  const [currentStep, setCurrentStep] = useState(0);
   const [leftSteps, setLeftSteps] = useState<SimulationStep[]>([]);
   const [rightSteps, setRightSteps] = useState<SimulationStep[]>([]);
+  const [autoPlayPending, setAutoPlayPending] = useState(false);
+  const maxStep = Math.max(0, Math.max(leftSteps.length, rightSteps.length) - 1);
+  const {
+    currentStep,
+    isRunning,
+    play,
+    pause,
+    stepForward,
+    stepBackward,
+    reset,
+  } = useStepController({ maxStep, intervalMs: 1000 });
 
   const handleLeftMemoryExponentChange = (next: number) => {
     setLeftMemoryExponent(next);
@@ -411,8 +489,30 @@ export default function Comparison() {
   useEffect(() => {
     setLeftSubAlgorithm(allocationMode === 'Contigua' ? 'First Fit' : 'Paginacion Simple');
     setRightSubAlgorithm(allocationMode === 'Contigua' ? 'Best Fit' : 'Paginacion Simple');
-    setCurrentStep(0);
+    reset();
   }, [allocationMode]);
+
+  useEffect(() => {
+    pause();
+    reset();
+    setLeftSteps([]);
+    setRightSteps([]);
+  }, [
+    allocationMode,
+    leftSubAlgorithm,
+    rightSubAlgorithm,
+    leftReplacementAlgorithm,
+    rightReplacementAlgorithm,
+    leftSegmentationStrategy,
+    rightSegmentationStrategy,
+    leftMemoryExponent,
+    rightMemoryExponent,
+    leftOsSize,
+    rightOsSize,
+    processes,
+    pause,
+    reset,
+  ]);
 
   const leftAlgorithm: AlgorithmOption =
     leftSubAlgorithm === 'Paginacion Simple'
@@ -428,13 +528,8 @@ export default function Comparison() {
         ? rightSegmentationStrategy
         : rightSubAlgorithm;
 
-  const maxStep = Math.max(0, Math.max(leftSteps.length, rightSteps.length) - 1);
   const leftCurrentStep = leftSteps[Math.min(currentStep, Math.max(0, leftSteps.length - 1))] ?? null;
   const rightCurrentStep = rightSteps[Math.min(currentStep, Math.max(0, rightSteps.length - 1))] ?? null;
-
-  useEffect(() => {
-    setCurrentStep((prev) => Math.min(prev, maxStep));
-  }, [maxStep]);
 
   useEffect(() => {
     const leftStep = leftCurrentStep;
@@ -560,8 +655,32 @@ export default function Comparison() {
 
     console.log('Comparison store snapshot:', useComparisonStore.getState());
 
-    setCurrentStep(0);
+    reset();
+    pause();
   };
+
+  const handlePlayComparison = () => {
+    const hasSteps = leftSteps.length > 0 || rightSteps.length > 0;
+    if (!hasSteps) {
+      handleStartComparison();
+      setAutoPlayPending(true);
+      return;
+    }
+
+    play();
+  };
+
+  useEffect(() => {
+    if (!autoPlayPending) {
+      return;
+    }
+
+    if (maxStep > 0) {
+      play();
+    }
+
+    setAutoPlayPending(false);
+  }, [autoPlayPending, maxStep, play]);
 
   return (
     <section className="w-full bg-white px-3 py-4 text-[#2f2a24]">
@@ -586,24 +705,16 @@ export default function Comparison() {
           </p>
 
           <div className="mt-4 flex items-center justify-center">
-            <div className="flex items-center gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
-              <button
-                type="button"
-                onClick={() => setCurrentStep((prevStep) => Math.max(0, prevStep - 1))}
-                className="border border-[#111] bg-white px-2 py-0.5 hover:bg-white"
-                disabled={currentStep === 0}
-              >
-                ◄
-              </button>
+            <div className="flex flex-col items-center gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+              <StepControls
+                onPlay={handlePlayComparison}
+                onPause={pause}
+                onStepForward={stepForward}
+                onStepBackward={stepBackward}
+                onReset={reset}
+                isRunning={isRunning}
+              />
               <span>Paso {currentStep + 1} / {maxStep + 1}</span>
-              <button
-                type="button"
-                onClick={() => setCurrentStep((prevStep) => Math.min(maxStep, prevStep + 1))}
-                className="border border-[#111] bg-white px-2 py-0.5 hover:bg-white"
-                disabled={currentStep === maxStep}
-              >
-                ►
-              </button>
             </div>
           </div>
         </section>
@@ -616,17 +727,17 @@ export default function Comparison() {
             subAlgorithm={leftSubAlgorithm}
             onSubAlgorithmChange={(next) => {
               setLeftSubAlgorithm(next);
-              setCurrentStep(0);
+              reset();
             }}
             replacementAlgorithm={leftReplacementAlgorithm}
             onReplacementAlgorithmChange={(next) => {
               setLeftReplacementAlgorithm(next);
-              setCurrentStep(0);
+              reset();
             }}
             segmentationStrategy={leftSegmentationStrategy}
             onSegmentationStrategyChange={(next) => {
               setLeftSegmentationStrategy(next);
-              setCurrentStep(0);
+              reset();
             }}
             memoryExponent={leftMemoryExponent}
             onMemoryExponentChange={handleLeftMemoryExponentChange}
@@ -645,17 +756,17 @@ export default function Comparison() {
             subAlgorithm={rightSubAlgorithm}
             onSubAlgorithmChange={(next) => {
               setRightSubAlgorithm(next);
-              setCurrentStep(0);
+              reset();
             }}
             replacementAlgorithm={rightReplacementAlgorithm}
             onReplacementAlgorithmChange={(next) => {
               setRightReplacementAlgorithm(next);
-              setCurrentStep(0);
+              reset();
             }}
             segmentationStrategy={rightSegmentationStrategy}
             onSegmentationStrategyChange={(next) => {
               setRightSegmentationStrategy(next);
-              setCurrentStep(0);
+              reset();
             }}
             memoryExponent={rightMemoryExponent}
             onMemoryExponentChange={handleRightMemoryExponentChange}

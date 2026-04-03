@@ -1,20 +1,5 @@
 import { type Process, type SimulationStep, type SimulationConfig, type MemoryBlock } from '../types';
-
-function buildStepStats(memoryState: MemoryBlock[], totalMemory: number) {
-    const used = memoryState.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0);
-    const freeBlocks = memoryState.filter((block) => block.isFree);
-    const totalFree = freeBlocks.reduce((sum, block) => sum + block.size, 0);
-    const largestFree = freeBlocks.reduce((max, block) => Math.max(max, block.size), 0);
-
-    return {
-        totalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
-        externalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
-        internalFragmentation: 0,
-        pageFaults: 0,
-        pageHits: 0,
-        memoryUsage: Math.round((used / Math.max(1, totalMemory)) * 100),
-    };
-}
+import { buildStepStats } from '../stepStats';
 
 function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
     return state.map((block) => ({
