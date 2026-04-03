@@ -38,6 +38,15 @@ export interface Process {
   duration: number;
 }
 
+export interface QueuedProcess {
+  id: string;
+  name: string;
+  size: number;
+  status: 'ejecucion' | 'espera' | 'finalizado';
+  progress?: number;     
+  arrivalTime?: number;  
+}
+
 export interface MemoryBlock {
   id: string;
   start: number;
