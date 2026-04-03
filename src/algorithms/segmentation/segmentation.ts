@@ -2,27 +2,20 @@ import { buildStepStats } from '../stepStats';
 import { buildSegmentsFromProcesses, type SegmentUnit } from '../nonContiguous/segments';
 import { type MemoryBlock, type Process, type SimulationConfig, type SimulationStep } from '../types';
 
+type SegmentStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
+type ProcessRuntime = {
+	process: Process;
+	totalSegments: number;
+	loadedSegments: number;
+	startedAt: number | null;
+	completed: boolean;
+};
+
 function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
 	return state.map((block) => ({
 		...block,
 		process: block.process ? { ...block.process } : null,
 	}));
-}
-
-function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
-	if (state.length === 0) return state;
-
-	const merged: MemoryBlock[] = [];
-	for (const block of state) {
-		const last = merged[merged.length - 1];
-		if (last && last.isFree && block.isFree) {
-			last.size += block.size;
-			continue;
-		}
-		merged.push({ ...block, process: block.process ? { ...block.process } : null });
-	}
-
-	return merged;
 }
 
 function toProcess(segment: SegmentUnit, step: number): Process {
@@ -48,13 +41,148 @@ function toProcess(segment: SegmentUnit, step: number): Process {
 	};
 }
 
+function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
+	if (state.length === 0) return state;
+
+	const merged: MemoryBlock[] = [];
+	for (const block of state) {
+		const last = merged[merged.length - 1];
+		if (last && last.isFree && block.isFree) {
+			last.size += block.size;
+			continue;
+		}
+		merged.push({ ...block, process: block.process ? { ...block.process } : null });
+	}
+
+	return merged;
+}
+
+function isOnlyOsOccupied(state: MemoryBlock[]): boolean {
+	return state.every((block) => block.isFree || (block.id === 'os' && !block.isFree && block.process === null));
+}
+
+function selectFreeBlockIndex(
+	state: MemoryBlock[],
+	segmentSize: number,
+	strategy: SegmentStrategy,
+	nextFitStartIndex: number,
+): number {
+	if (strategy === 'Best Fit') {
+		let bestIndex = -1;
+		let bestSize = Number.MAX_VALUE;
+		for (let i = 0; i < state.length; i += 1) {
+			const block = state[i];
+			if (!block.isFree || block.size < segmentSize) continue;
+			if (block.size < bestSize) {
+				bestSize = block.size;
+				bestIndex = i;
+			}
+		}
+		return bestIndex;
+	}
+
+	if (strategy === 'Worst Fit') {
+		let worstIndex = -1;
+		let worstSize = -1;
+		for (let i = 0; i < state.length; i += 1) {
+			const block = state[i];
+			if (!block.isFree || block.size < segmentSize) continue;
+			if (block.size > worstSize) {
+				worstSize = block.size;
+				worstIndex = i;
+			}
+		}
+		return worstIndex;
+	}
+
+	if (strategy === 'Next Fit') {
+		if (state.length === 0) {
+			return -1;
+		}
+
+		for (let offset = 0; offset < state.length; offset += 1) {
+			const i = (nextFitStartIndex + offset) % state.length;
+			const block = state[i];
+			if (block.isFree && block.size >= segmentSize) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	return state.findIndex((block) => block.isFree && block.size >= segmentSize);
+}
+
 export function segmentationSimulation(processes: Process[], memoryState: MemoryBlock[], config: SimulationConfig): SimulationStep[] {
 	let state = cloneMemoryState(memoryState);
-	const pending = buildSegmentsFromProcesses(processes).sort((a, b) => a.arrivalTime - b.arrivalTime);
+	const processRuntime = new Map<string, ProcessRuntime>();
+
+	for (const process of processes) {
+		processRuntime.set(process.id, {
+			process: { ...process },
+			totalSegments: 0,
+			loadedSegments: 0,
+			startedAt: null,
+			completed: false,
+		});
+	}
+
+	const pending = buildSegmentsFromProcesses(processes)
+		.map((segment) => ({
+			...segment,
+			arrivalTime: segment.baseProcess.arrivalTime,
+		}))
+		.sort((a, b) => a.arrivalTime - b.arrivalTime);
+
+	for (const segment of pending) {
+		const runtime = processRuntime.get(segment.parentProcessId);
+		if (runtime) {
+			runtime.totalSegments += 1;
+		}
+	}
+
 	const steps: SimulationStep[] = [];
+	const strategy: SegmentStrategy = config.segmentationStrategy ?? 'First Fit';
+	let nextFitStartIndex = 0;
 	let step = 0;
 
-	while (pending.length > 0) {
+	while (true) {
+		let didRelease = false;
+		for (const runtime of processRuntime.values()) {
+			if (runtime.completed || runtime.startedAt === null) {
+				continue;
+			}
+
+			if (step < runtime.startedAt + runtime.process.duration) {
+				continue;
+			}
+
+			for (const block of state) {
+				if (block.isFree || !block.process) {
+					continue;
+				}
+
+				if (block.process.parentProcessId === runtime.process.id) {
+					block.isFree = true;
+					block.process = null;
+					didRelease = true;
+				}
+			}
+
+			runtime.completed = true;
+			runtime.startedAt = null;
+		}
+
+		if (didRelease) {
+			state = mergeAdjacentFreeBlocks(state);
+			if (state.length > 0) {
+				nextFitStartIndex = nextFitStartIndex % state.length;
+			} else {
+				nextFitStartIndex = 0;
+			}
+		}
+
 		for (let index = 0; index < pending.length; ) {
 			const segment = pending[index];
 			if (segment.arrivalTime > step) {
@@ -62,7 +190,13 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 				continue;
 			}
 
-			const freeBlockIndex = state.findIndex((block) => block.isFree && block.size >= segment.size);
+			const runtime = processRuntime.get(segment.parentProcessId);
+			if (!runtime || runtime.completed) {
+				pending.splice(index, 1);
+				continue;
+			}
+
+			const freeBlockIndex = selectFreeBlockIndex(state, segment.size, strategy, nextFitStartIndex);
 			if (freeBlockIndex === -1) {
 				index += 1;
 				continue;
@@ -85,16 +219,32 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 				});
 			}
 
+			if (strategy === 'Next Fit' && state.length > 0) {
+				nextFitStartIndex = (freeBlockIndex + 1) % state.length;
+			}
+
+			runtime.loadedSegments += 1;
+
 			pending.splice(index, 1);
 		}
 
-		const waitingParents = Array.from(
-			new Map(
-				pending
-					.filter((segment) => segment.arrivalTime <= step)
-					.map((segment) => [segment.parentProcessId, segment.baseProcess]),
-			).values(),
-		).map((process) => ({ ...process }));
+		for (const runtime of processRuntime.values()) {
+			if (runtime.completed || runtime.startedAt !== null) {
+				continue;
+			}
+
+			if (step < runtime.process.arrivalTime) {
+				continue;
+			}
+
+			if (runtime.loadedSegments === runtime.totalSegments) {
+				runtime.startedAt = step;
+			}
+		}
+
+		const waitingParents = Array.from(processRuntime.values())
+			.filter((runtime) => !runtime.completed && runtime.startedAt === null && step >= runtime.process.arrivalTime)
+			.map((runtime) => ({ ...runtime.process }));
 
 		steps.push({
 			stepNumber: step,
@@ -103,12 +253,18 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 			stats: buildStepStats(state, config.totalMemory),
 		});
 
-		const hasFutureArrivals = pending.some((segment) => segment.arrivalTime > step);
-		const hasAnyFitNow = pending
-			.filter((segment) => segment.arrivalTime <= step)
-			.some((segment) => state.some((block) => block.isFree && block.size >= segment.size));
+		const hasFutureArrivals = Array.from(processRuntime.values()).some(
+			(runtime) => !runtime.completed && runtime.startedAt === null && runtime.process.arrivalTime > step,
+		);
+		const hasRunningProcesses = Array.from(processRuntime.values()).some(
+			(runtime) => !runtime.completed && runtime.startedAt !== null,
+		);
 
-		if (!hasFutureArrivals && !hasAnyFitNow && pending.length > 0) {
+		if (!hasRunningProcesses && !hasFutureArrivals && isOnlyOsOccupied(state)) {
+			break;
+		}
+
+		if (pending.length === 0 && !hasRunningProcesses && !hasFutureArrivals) {
 			break;
 		}
 

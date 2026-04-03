@@ -58,6 +58,7 @@ export default function Simulator() {
   const [memoriaGuardada, setMemoriaGuardada] = useState<number>(512);
   const [osGuardado, setOsGuardado] = useState<number>(64);
   const [algorithm, setAlgorithm] = useState<AlgorithmOption>('First Fit');
+  const [segmentationStrategy, setSegmentationStrategy] = useState<'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit'>('First Fit');
   const [allocationMode, setAllocationMode] = useState('Contigua');
   const [autoPlayPending, setAutoPlayPending] = useState(false);
   const maxStep = Math.max(0, steps.length - 1);
@@ -116,6 +117,7 @@ export default function Simulator() {
       totalMemory: memoriaGuardada,
       processes,
       osSize: osGuardado,
+      segmentationStrategy: algorithm === 'Segmentacion' ? segmentationStrategy : undefined,
     };
 
     const generatedSteps = runAllocationSimulation(algorithm, processes, config);
@@ -168,7 +170,7 @@ export default function Simulator() {
     pause();
     setStoreCurrentStep(0);
     setSteps([]);
-  }, [algorithm, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
+  }, [algorithm, segmentationStrategy, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
 
   const occupiedMemory = memoryState?.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0) ?? 0;
   const freeMemory = Math.max(0, memoriaGuardada - occupiedMemory);
@@ -222,6 +224,9 @@ export default function Simulator() {
             ? replacementAlgorithm
             : algorithm;
           setAlgorithm(selectedAlgorithm as AlgorithmOption);
+          if (algorithm === 'Segmentacion') {
+            setSegmentationStrategy(replacementAlgorithm as 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit');
+          }
           setAllocationMode(allocationMode);
         }} 
         />

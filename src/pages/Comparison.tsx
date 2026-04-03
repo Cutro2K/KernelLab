@@ -16,6 +16,8 @@ import { StepControls } from '../components/visualization/StepControls';
 import { AddProcessButton } from '../components/visualization/AddProcessButton';
 import { Tooltip } from '../components/ui/Tooltip';
 
+type SegmentationStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
+
 type AlgorithmMetrics = {
   usage: number;
   fragmentation: number;
@@ -515,8 +517,8 @@ export default function Comparison() {
   const [rightSubAlgorithm, setRightSubAlgorithm] = useState<AlgorithmOption>('Best Fit');
   const [leftReplacementAlgorithm, setLeftReplacementAlgorithm] = useState<AlgorithmOption>('FIFO');
   const [rightReplacementAlgorithm, setRightReplacementAlgorithm] = useState<AlgorithmOption>('LRU');
-  const [leftSegmentationStrategy, setLeftSegmentationStrategy] = useState<AlgorithmOption>('First Fit');
-  const [rightSegmentationStrategy, setRightSegmentationStrategy] = useState<AlgorithmOption>('Best Fit');
+  const [leftSegmentationStrategy, setLeftSegmentationStrategy] = useState<SegmentationStrategy>('First Fit');
+  const [rightSegmentationStrategy, setRightSegmentationStrategy] = useState<SegmentationStrategy>('Best Fit');
   const [leftMemoryExponent, setLeftMemoryExponent] = useState(9);
   const [rightMemoryExponent, setRightMemoryExponent] = useState(9);
   const [leftOsSize, setLeftOsSize] = useState(64);
@@ -573,19 +575,25 @@ export default function Comparison() {
     reset,
   ]);
 
-  const leftAlgorithm: AlgorithmOption =
+  const leftAlgorithmForMetrics: AlgorithmOption =
     leftSubAlgorithm === 'Paginacion Simple'
       ? leftReplacementAlgorithm
       : leftSubAlgorithm === 'Segmentacion'
         ? leftSegmentationStrategy
         : leftSubAlgorithm;
 
-  const rightAlgorithm: AlgorithmOption =
+  const rightAlgorithmForMetrics: AlgorithmOption =
     rightSubAlgorithm === 'Paginacion Simple'
       ? rightReplacementAlgorithm
       : rightSubAlgorithm === 'Segmentacion'
         ? rightSegmentationStrategy
         : rightSubAlgorithm;
+
+  const leftSimulationAlgorithm: AlgorithmOption =
+    leftSubAlgorithm === 'Paginacion Simple' ? leftReplacementAlgorithm : leftSubAlgorithm;
+
+  const rightSimulationAlgorithm: AlgorithmOption =
+    rightSubAlgorithm === 'Paginacion Simple' ? rightReplacementAlgorithm : rightSubAlgorithm;
 
   const leftCurrentStep = leftSteps[Math.min(currentStep, Math.max(0, leftSteps.length - 1))] ?? null;
   const rightCurrentStep = rightSteps[Math.min(currentStep, Math.max(0, rightSteps.length - 1))] ?? null;
@@ -620,9 +628,9 @@ export default function Comparison() {
     setStoreCurrentStep,
   ]);
 
-  const leftMetrics = ALGORITHM_METRICS[leftAlgorithm];
-  const rightMetrics = ALGORITHM_METRICS[rightAlgorithm];
-  const betterChoice = leftMetrics.score >= rightMetrics.score ? leftAlgorithm : rightAlgorithm;
+  const leftMetrics = ALGORITHM_METRICS[leftAlgorithmForMetrics];
+  const rightMetrics = ALGORITHM_METRICS[rightAlgorithmForMetrics];
+  const betterChoice = leftMetrics.score >= rightMetrics.score ? leftAlgorithmForMetrics : rightAlgorithmForMetrics;
 
   const comparisonRows = [
     {
@@ -691,21 +699,23 @@ export default function Comparison() {
     const rightTotalMemory = 2 ** rightMemoryExponent;
 
     const leftConfig: SimulationConfig = {
-      algorithm: leftAlgorithm,
+      algorithm: leftSimulationAlgorithm,
       totalMemory: leftTotalMemory,
       processes,
       osSize: leftOsSize,
+      segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
     };
 
     const rightConfig: SimulationConfig = {
-      algorithm: rightAlgorithm,
+      algorithm: rightSimulationAlgorithm,
       totalMemory: rightTotalMemory,
       processes,
       osSize: rightOsSize,
+      segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
     };
 
-    const generatedLeftSteps = runAllocationSimulation(leftAlgorithm, processes, leftConfig);
-    const generatedRightSteps = runAllocationSimulation(rightAlgorithm, processes, rightConfig);
+    const generatedLeftSteps = runAllocationSimulation(leftSimulationAlgorithm, processes, leftConfig);
+    const generatedRightSteps = runAllocationSimulation(rightSimulationAlgorithm, processes, rightConfig);
 
     setLeftSteps(generatedLeftSteps);
     setRightSteps(generatedRightSteps);
@@ -713,8 +723,8 @@ export default function Comparison() {
     useComparisonStore.setState((prevState) => ({
       ...prevState,
       allocationStrategy: allocationMode,
-      algorithm1: leftAlgorithm,
-      algorithm2: rightAlgorithm,
+      algorithm1: leftSimulationAlgorithm,
+      algorithm2: rightSimulationAlgorithm,
       currentStep: 0,
       configParams1: leftConfig,
       configParams2: rightConfig,
@@ -803,7 +813,7 @@ export default function Comparison() {
             }}
             segmentationStrategy={leftSegmentationStrategy}
             onSegmentationStrategyChange={(next) => {
-              setLeftSegmentationStrategy(next);
+              setLeftSegmentationStrategy(next as SegmentationStrategy);
               reset();
             }}
             memoryExponent={leftMemoryExponent}
@@ -832,7 +842,7 @@ export default function Comparison() {
             }}
             segmentationStrategy={rightSegmentationStrategy}
             onSegmentationStrategyChange={(next) => {
-              setRightSegmentationStrategy(next);
+              setRightSegmentationStrategy(next as SegmentationStrategy);
               reset();
             }}
             memoryExponent={rightMemoryExponent}
@@ -880,49 +890,49 @@ export default function Comparison() {
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithm}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithmForMetrics}</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{leftMetrics.score}</span>
                 <span className="text-sm font-bold text-[#4b5563]">score</span>
               </div>
               <div className="mt-4 h-3 border-2 border-[#111] bg-white">
-                <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithm].fill}`} style={{ width: `${leftMetrics.score}%` }} />
+                <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithmForMetrics].fill}`} style={{ width: `${leftMetrics.score}%` }} />
               </div>
-              <p className="mt-2 text-xs font-semibold text-[#4b5563]">{ALGORITHM_STYLES[leftAlgorithm].pattern}</p>
+              <p className="mt-2 text-xs font-semibold text-[#4b5563]">{ALGORITHM_STYLES[leftAlgorithmForMetrics].pattern}</p>
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithm}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithmForMetrics}</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{rightMetrics.score}</span>
                 <span className="text-sm font-bold text-[#4b5563]">score</span>
               </div>
               <div className="mt-4 h-3 border-2 border-[#111] bg-white">
-                <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithm].fill}`} style={{ width: `${rightMetrics.score}%` }} />
+                <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithmForMetrics].fill}`} style={{ width: `${rightMetrics.score}%` }} />
               </div>
-              <p className="mt-2 text-xs font-semibold text-[#4b5563]">{ALGORITHM_STYLES[rightAlgorithm].pattern}</p>
+              <p className="mt-2 text-xs font-semibold text-[#4b5563]">{ALGORITHM_STYLES[rightAlgorithmForMetrics].pattern}</p>
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithm}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithmForMetrics}</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{leftMetrics.usage}%</span>
                 <span className="text-sm font-bold text-[#4b5563]">uso</span>
               </div>
               <div className="mt-4 h-3 border-2 border-[#111] bg-white">
-                <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithm].fill}`} style={{ width: `${leftMetrics.usage}%` }} />
+                <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithmForMetrics].fill}`} style={{ width: `${leftMetrics.usage}%` }} />
               </div>
               <p className="mt-2 text-xs font-semibold text-[#4b5563]">Memoria aprovechada</p>
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithm}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithmForMetrics}</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{rightMetrics.usage}%</span>
                 <span className="text-sm font-bold text-[#4b5563]">uso</span>
               </div>
               <div className="mt-4 h-3 border-2 border-[#111] bg-white">
-                <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithm].fill}`} style={{ width: `${rightMetrics.usage}%` }} />
+                <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithmForMetrics].fill}`} style={{ width: `${rightMetrics.usage}%` }} />
               </div>
               <p className="mt-2 text-xs font-semibold text-[#4b5563]">Memoria aprovechada</p>
             </div>
@@ -932,8 +942,8 @@ export default function Comparison() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-lg font-bold">Desglose por métrica</h4>
               <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wide text-[#4b5563]">
-                <span className="border-2 border-[#111] bg-white px-2 py-1">{leftAlgorithm}</span>
-                <span className="border-2 border-[#111] bg-white px-2 py-1">{rightAlgorithm}</span>
+                <span className="border-2 border-[#111] bg-white px-2 py-1">{leftAlgorithmForMetrics}</span>
+                <span className="border-2 border-[#111] bg-white px-2 py-1">{rightAlgorithmForMetrics}</span>
               </div>
             </div>
 
@@ -950,19 +960,19 @@ export default function Comparison() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <span className={`w-28 text-right text-xs font-bold ${leftWins ? 'text-[#364152]' : 'text-[#4b5563]'}`}>
-                          {leftAlgorithm}: {row.leftValue}{row.suffix}
+                          {leftAlgorithmForMetrics}: {row.leftValue}{row.suffix}
                         </span>
                         <div className="h-4 flex-1 border-2 border-[#111] bg-white">
-                          <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithm].fill}`} style={{ width: `${leftWidth}%` }} />
+                          <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithmForMetrics].fill}`} style={{ width: `${leftWidth}%` }} />
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
                         <span className={`w-28 text-right text-xs font-bold ${rightWins ? 'text-[#364152]' : 'text-[#4b5563]'}`}>
-                          {rightAlgorithm}: {row.rightValue}{row.suffix}
+                          {rightAlgorithmForMetrics}: {row.rightValue}{row.suffix}
                         </span>
                         <div className="h-4 flex-1 border-2 border-[#111] bg-white">
-                          <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithm].fill}`} style={{ width: `${rightWidth}%` }} />
+                          <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithmForMetrics].fill}`} style={{ width: `${rightWidth}%` }} />
                         </div>
                       </div>
                     </div>
