@@ -109,7 +109,6 @@ export default function Simulator() {
     }
   };
   
-  // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
   const [isViewProces, setViewProces] = useState(false);
 
   const runSimulation = () => {

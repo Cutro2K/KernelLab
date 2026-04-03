@@ -14,6 +14,8 @@ import { useStepController } from '../hooks/useStepController';
 import { StepControls } from '../components/visualization/StepControls';
 import { AddProcessButton } from '../components/visualization/AddProcessButton';
 import { Tooltip } from '../components/ui/Tooltip';
+import { Modal } from '../components/ui/Modal';
+import { ProcessQueue } from '../components/visualization/ProcessQueue';
 
 type SegmentationStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
 
@@ -311,6 +313,7 @@ function SimulatorPanel({
   processQueue,
   currentStep,
   maxStep,
+  processQueueFunction,
 }: {
   title: string;
   allocationMode: AllocationMode;
@@ -337,6 +340,7 @@ function SimulatorPanel({
   processQueue: Process[];
   currentStep: number;
   maxStep: number;
+  processQueueFunction: (value : boolean) => void;
 }) {
   const subAlgorithmOptions = allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS : NON_CONTIGUOUS_ALGORITHMS;
   const showReplacementSelector = subAlgorithm === 'Paginacion Simple';
@@ -478,13 +482,22 @@ function SimulatorPanel({
             <div className="border border-[#111] bg-white px-2 py-1">Fallos: {stats?.pageFaults ?? '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Frag. ext: {stats ? `${stats.externalFragmentation}%` : '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Frag. int: {stats ? `${stats.internalFragmentation}%` : '-'}</div>
-            <div className="col-span-2 border border-[#111] bg-white px-2 py-1">
-              <div>Procesos en espera: {processQueue.length}</div>
-              <div className="mt-1 text-xs font-semibold text-[#4b5563]">
-                {processQueue.length > 0
-                  ? processQueue.map((process) => process.name).join(', ')
-                  : 'Cola vacía'}
+            <div className="col-span-2 flex w-full">
+              <div className="flex-1 border border-[#111] bg-white px-2 py-1">
+                <div>Procesos en espera: {processQueue.length}</div>
+                <div className="mt-1 text-xs font-semibold text-[#4b5563]">
+                  {processQueue.length > 0
+                    ? processQueue.map((process) => process.name).join(', ')
+                    : 'Cola vacía'}
+                </div>
               </div>
+              <Button
+                variant="primary"
+                className="border-2 border-black border-l-0" 
+                onClick={() => processQueueFunction(true)}
+              >
+                [Ver Procesos]
+              </Button>
             </div>
           </div>
         </div>
@@ -492,6 +505,10 @@ function SimulatorPanel({
     </section>
   );
 }
+
+/*
+
+*/
 
 export const CompProcessList = () => {
   const processes = useComparisonStore((state) => state.processes);
@@ -546,6 +563,8 @@ export default function Comparison() {
   const [leftSteps, setLeftSteps] = useState<SimulationStep[]>([]);
   const [rightSteps, setRightSteps] = useState<SimulationStep[]>([]);
   const [autoPlayPending, setAutoPlayPending] = useState(false);
+  const [isViewProces1, setViewProces1] = useState(false);
+  const [isViewProces2, setViewProces2] = useState(false);
   const maxStep = Math.max(0, Math.max(leftSteps.length, rightSteps.length) - 1);
   const {
     currentStep,
@@ -861,7 +880,18 @@ export default function Comparison() {
             processQueue={leftCurrentStep?.processQueue ?? []}
             currentStep={currentStep}
             maxStep={maxStep}
+            processQueueFunction={setViewProces1}
           />
+          <Modal 
+                  isOpen={isViewProces1} 
+                  onClose={() => setViewProces1(false)}
+                  title="* COLA DE PROCESOS"
+                  maxWidth="max-w-4xl"
+                >
+                  <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-2">
+                    <ProcessQueue mode="comparison1"/>
+                  </div>
+          </Modal>
           <SimulatorPanel
             title="Simulador B"
             allocationMode={allocationMode}
@@ -892,7 +922,18 @@ export default function Comparison() {
             processQueue={rightCurrentStep?.processQueue ?? []}
             currentStep={currentStep}
             maxStep={maxStep}
+            processQueueFunction={setViewProces2}
           />
+          <Modal 
+                  isOpen={isViewProces2} 
+                  onClose={() => setViewProces2(false)}
+                  title="* COLA DE PROCESOS"
+                  maxWidth="max-w-4xl"
+                >
+                  <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-2">
+                    <ProcessQueue mode="comparison2"/>
+                  </div>
+          </Modal>
         </section>
 
         <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.08)]">
