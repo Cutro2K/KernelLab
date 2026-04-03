@@ -41,12 +41,9 @@ export interface Process {
 }
 
 export interface QueuedProcess {
-  id: string;
-  name: string;
-  size: number;
+  process : Process;
   status: 'ejecucion' | 'espera' | 'finalizado';
-  progress?: number;     
-  arrivalTime?: number;  
+  progress?: number;  
 }
 
 export interface MemoryBlock {

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import {type Process, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption} from '../algorithms/types';
 
 interface SimulationStore {
-    algorithm: AlgorithmType | null;
+    algorithm: AlgorithmOption | null;
     processes: Process[] | null;
     addProcess: (process: Process) => void;
     removeProcess: (id: string) => void;
@@ -38,12 +38,7 @@ interface ComparisonStore {
     setCurrentStep: (step: number) => void;
 }
 
-type AlgorithmType =
-    | 'first-fit' | 'best-fit' | 'worst-fit' | 'next-fit'
-    | 'fifo' | 'lru' | 'optimal' | 'clock'
-    | 'paging' | 'segmentation' | 'buddy-system';
-
-export const useStore = create<SimulationStore>()((set) => ({
+export const useSimulationStore = create<SimulationStore>()((set) => ({
     algorithm: null,
     currentStep: null,
     memoryState: null,

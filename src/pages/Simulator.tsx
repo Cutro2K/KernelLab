@@ -5,14 +5,14 @@ import { StepControls } from '../components/visualization/StepControls';
 import { type MemoryBlock, type Process , type QueuedProcess} from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
-import { useStore } from "../store/simulationStore";
+import { useSimulationStore } from "../store/simulationStore";
 import { useState } from 'react';
 import { ProcessQueue } from "../components/visualization/ProcessQueue";
 
 
 export const SimProcessList = () => {
-  const processes = useStore((state) => state.processes);
-  const removeProcess = useStore((state) => state.removeProcess);
+  const processes = useSimulationStore((state) => state.processes);
+  const removeProcess = useSimulationStore((state) => state.removeProcess);
 
   return (
     <div className="flex flex-col gap-3">
@@ -40,9 +40,9 @@ export const SimProcessList = () => {
 };
 
 export default function Simulator() {
-  const addProcess = useStore((state) => state.addProcess);
-  const processCount = useStore((state) => state.processes?.length ?? 0);
-
+  const addProcess = useSimulationStore((state) => state.addProcess);
+  const processCount = useSimulationStore((state) => state.processes?.length ?? 0);
+ 
   const handleRandomProcesses = () => {
     const totalToAdd = Math.floor(Math.random() * 5) + 3;
 
@@ -143,60 +143,6 @@ export default function Simulator() {
       isFree: true,
       process: null
     }
-  ];
-  const mockProcessQueue: QueuedProcess[] = [
-  // --- Procesos en Ejecución (Deberían mostrar la barra de progreso) ---
-  { 
-    id: 'p1', 
-    name: 'P1', 
-    size: 128, 
-    status: 'ejecucion', 
-    progress: 85 
-  },
-  { 
-    id: 'p2', 
-    name: 'P2', 
-    size: 64, 
-    status: 'ejecucion', 
-    progress: 30 
-  },
-
-  // --- Procesos en Espera (Deberían mostrar el arrivalTime) ---
-  { 
-    id: 'p3', 
-    name: 'P3', 
-    size: 256, 
-    status: 'espera', 
-    arrivalTime: 3 
-  },
-  { 
-    id: 'p4', 
-    name: 'P4', 
-    size: 512, 
-    status: 'espera', 
-    arrivalTime: 5 
-  },
-  { 
-    id: 'p5', 
-    name: 'P5', 
-    size: 1024, 
-    status: 'espera', 
-    arrivalTime: 8 
-  },
-
-  // --- Procesos Finalizados (Solo muestran la etiqueta de finalizado) ---
-  { 
-    id: 'p0', 
-    name: 'P0', 
-    size: 32, 
-    status: 'finalizado' 
-  },
-  { 
-    id: 'p6', 
-    name: 'P6', 
-    size: 128, 
-    status: 'finalizado' 
-  }
   ];
   
   return (
@@ -314,7 +260,7 @@ export default function Simulator() {
         maxWidth="max-w-4xl"
       >
         <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-2">
-          <ProcessQueue processes={mockProcessQueue} />
+          <ProcessQueue/>
         </div>
       </Modal>
 
