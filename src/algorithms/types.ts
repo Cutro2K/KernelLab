@@ -1,5 +1,3 @@
-import React from 'react';
-
 // TYPES
 
 export type AlgorithmOption =
@@ -77,17 +75,18 @@ export interface StepStats {
 
 export interface SimulationStep {
     stepNumber: number;
-    action: string; // "ALLOCATE" | "DEALLOCATE" | "PAGE_FAULT" | ...
-    description: string; // texto legible para el usuario
+    action?: string;
+    description?: string;
     memoryState: MemoryBlock[];
     processQueue: Process[];
-    highlights: string[]; // IDs de bloques a resaltar
+    highlights?: string[];
     stats: StepStats;
 }
 
 export interface SimulationConfig {
     algorithm: AlgorithmOption;
     totalMemory: number;
+    osSize?: number;
     processes: Process[];
     frames?: number; // para paginación
     pageSize?: number;
