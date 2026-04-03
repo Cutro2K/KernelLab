@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { ProcessQueue } from "../components/visualization/ProcessQueue";
 import { cloneMemoryState, computeStats, runAllocationSimulation } from "../hooks/useAlgorithm";
 import { useStepController } from "../hooks/useStepController";
+import { AddProcessButton } from "../components/visualization/AddProcessButton";
 
 
 export const SimProcessList = () => {
@@ -181,7 +182,12 @@ export default function Simulator() {
         </div>
         
         <div className="flex flex-col gap-2 mt-2">
-          <Button variant="primary" className="border-2 border-black">[+ Agregar]</Button>
+          <AddProcessButton
+            processes={processes}
+            onAddProcess={addProcess}
+            className="border-2 border-black"
+            buttonLabel="[+ Agregar]"
+          />
           <Button variant="secondary" onClick={handleRandomProcesses} className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
         </div>
       </div>
@@ -219,9 +225,9 @@ export default function Simulator() {
         
         <p className="px-2 text-sm text-center">Particiones (dirección baja &rarr; alta)</p>
         
-        <div className="w-full px-2 lg:px-6 overflow-x-auto">
+        <div className="w-full px-2 overflow-x-auto">
           <MemoryMap
-            className="mx-auto"
+            className="w-full"
           />      
         </div>
         
@@ -236,12 +242,14 @@ export default function Simulator() {
           />
         </div>
         <p className="text-center text-xs font-bold uppercase">Paso {currentStep + 1} / {maxStep + 1}</p>
-        <div className="w-full max-w-[400px] border-2 border-black mx-auto bg-transparent">
+        <div className="w-full px-2">
+          <div className="w-full min-h-[200px] border-2 border-black bg-transparent">
             <p className="p-4 leading-relaxed text-sm">
               {currentSimulationStep?.description
                 ? `¤ ${currentSimulationStep.description}`
                 : 'Iniciá la simulación para ver el detalle de cada paso.'}
-            </p>   
+            </p>
+          </div>
         </div>
       </div>
 

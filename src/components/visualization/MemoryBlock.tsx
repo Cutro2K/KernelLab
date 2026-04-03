@@ -10,6 +10,7 @@ interface MemoryBlockProps {
 export function MemoryBlock({ block, totalMemory }: MemoryBlockProps) {
   const normalizedTotalMemory = Math.max(1, totalMemory);
   const widthPercent = (block.size / normalizedTotalMemory) * 100;
+  const occupiedColor = block.process?.color ?? '#6b7280';
   const previousIsFree = useRef(block.isFree);
   const [releasePulse, setReleasePulse] = useState(false);
 
@@ -62,14 +63,17 @@ export function MemoryBlock({ block, totalMemory }: MemoryBlockProps) {
         relative h-full border-2 border-black flex flex-col justify-center items-center overflow-hidden transition-all duration-300
         ${block.isFree ? 'bg-gray-200/50 pattern-diagonal-lines pattern-gray-200 pattern-size-2 pattern-opacity-100' : 'bg-gray-400'}
       `}
-      style={{ width: `${widthPercent}%` }}
+      style={{
+        width: `${widthPercent}%`,
+        backgroundColor: block.isFree ? undefined : occupiedColor,
+      }}
     >
       {/* Info del bloque */}
       <div className="text-center">
-        <span className="font-bold text-black text-sm">
-          {block.isFree ? 'LIBRE' : block.process?.name}
+        <span className={`font-bold text-sm ${block.isFree ? 'text-black' : 'text-white'}`}>
+          {block.isFree ? 'LIBRE' : block.process?.name ?? 'OS'}
         </span>
-        <span className="block text-xs text-black font-mono">
+        <span className={`block text-xs font-mono ${block.isFree ? 'text-black' : 'text-white'}`}>
           {block.size} KB
         </span>
       </div>

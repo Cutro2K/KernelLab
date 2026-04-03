@@ -13,6 +13,7 @@ import {computeStats, runAllocationSimulation, cloneMemoryState} from '../hooks/
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStepController } from '../hooks/useStepController';
 import { StepControls } from '../components/visualization/StepControls';
+import { AddProcessButton } from '../components/visualization/AddProcessButton';
 
 type AlgorithmMetrics = {
   usage: number;
@@ -705,7 +706,7 @@ export default function Comparison() {
           </p>
 
           <div className="mt-4 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+            <div className="flex items-center gap-3 text-sm font-bold">
               <StepControls
                 onPlay={handlePlayComparison}
                 onPause={pause}
@@ -792,9 +793,11 @@ export default function Comparison() {
             <img src={dice} alt="Randomize" className="w-5 ml-2 mr-2" />
             Generar aleatorio
           </Button>
-          <Button variant="primary">
-            + Agregar proceso
-          </Button>
+          <AddProcessButton
+            processes={processes}
+            onAddProcess={addProcess}
+            buttonLabel="+ Agregar proceso"
+          />
         </section>
         <section className="border-2 border-[#111] bg-white px-4 py-5 shadow-[6px_6px_0_rgba(17,17,17,0.08)]">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
