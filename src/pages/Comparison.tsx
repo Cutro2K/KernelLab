@@ -3,7 +3,6 @@ import { ProcessCard, RETRO_NEUTRAL_COLORS } from '../components/visualization/P
 import { Button } from '../components/ui/Button';
 import { useComparisonStore } from '../store/simulationStore';
 import dice from "../assets/dice.svg";
-import settingsIcon from "../assets/settings.svg";
 import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 import { type Process } from '../algorithms/types';

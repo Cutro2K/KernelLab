@@ -128,6 +128,10 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
             stackSize: 0,
             dataSize: 0,
             heapSize: 0,
+            codeArrivalTime: 0,
+            stackArrivalTime: 0,
+            dataArrivalTime: 0,
+            heapArrivalTime: 0,
             size: params.osSize,
             arrivalTime: 0,
             duration: 999999, // SO nunca termina
