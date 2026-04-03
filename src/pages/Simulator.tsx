@@ -2,7 +2,7 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { ProcessCard, RETRO_NEUTRAL_COLORS } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { type MemoryBlock, type Process, type SimulationStep, type SimulationConfig, type AlgorithmOption} from  "../algorithms/types";
+import { type Process, type SimulationStep, type SimulationConfig, type AlgorithmOption} from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 import { useSimulationStore } from "../store/simulationStore";

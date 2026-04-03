@@ -1,6 +1,5 @@
 import { calculateStats } from '../../utils/helpers';
 import { MemoryBlock } from './MemoryBlock';
-import { type MemoryBlock as MemoryBlockType,type AlgorithmOption } from '../../algorithms/types';
 import { useSimulationStore } from '../../store/simulationStore';
 
 interface MemoryMapProps {

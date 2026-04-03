@@ -1,6 +1,6 @@
 // IMPORTS
 import { useState } from "react";
-import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS, type AlgorithmOption } from '../../algorithms/types';
+import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS } from '../../algorithms/types';
 
 // INTERFACES
 interface AlgorithmConfigProps {

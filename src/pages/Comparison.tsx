@@ -8,7 +8,7 @@ import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 import { type Process } from '../algorithms/types';
 import { type MemoryBlock } from '../algorithms/types';
-import { type SimulationStep, type SimulationConfig, type StepStats } from '../algorithms/types';
+import { type SimulationStep, type SimulationConfig} from '../algorithms/types';
 import {computeStats, runAllocationSimulation, cloneMemoryState} from '../hooks/useAlgorithm';
 
 type AlgorithmMetrics = {
