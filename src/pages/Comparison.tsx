@@ -465,10 +465,6 @@ function SimulatorPanel({
               </div>
             </div>
           </div>
-          <Button variant="info" className="mt-3 w-full text-sm flex items-center justify-center">
-            <img src={settingsIcon} alt="Configuracion" className="mr-2 h-4 w-4" />
-            Configuracion
-          </Button>
         </div>
       </div>
     </section>
