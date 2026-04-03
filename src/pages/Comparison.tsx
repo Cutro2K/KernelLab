@@ -575,6 +575,8 @@ export default function Comparison() {
   const addProcess = useComparisonStore((state) => state.addProcess);
   const setMemoryState1 = useComparisonStore((state) => state.setMemoryState1);
   const setMemoryState2 = useComparisonStore((state) => state.setMemoryState2);
+  const setConfigParams1 = useComparisonStore((state) => state.setConfigParams1);
+  const setConfigParams2 = useComparisonStore((state) => state.setConfigParams2);
   const setStatistics1 = useComparisonStore((state) => state.setStatistics1);
   const setStatistics2 = useComparisonStore((state) => state.setStatistics2);
   const setStoreCurrentStep = useComparisonStore((state) => state.setCurrentStep);
@@ -680,6 +682,47 @@ export default function Comparison() {
 
   const rightSimulationAlgorithm: AlgorithmOption =
     rightSubAlgorithm === 'Paginacion Simple' ? rightReplacementAlgorithm : rightSubAlgorithm;
+
+  useEffect(() => {
+    const leftTotalMemory = 2 ** leftMemoryExponent;
+    const rightTotalMemory = 2 ** rightMemoryExponent;
+    const leftPageSize = 2 ** Math.min(leftPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(leftTotalMemory / 2))))));
+    const rightPageSize = 2 ** Math.min(rightPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(rightTotalMemory / 2))))));
+
+    setConfigParams1({
+      algorithm: leftSimulationAlgorithm,
+      totalMemory: leftTotalMemory,
+      processes,
+      osSize: leftOsSize,
+      pageSize: leftSubAlgorithm === 'Paginacion Simple' ? leftPageSize : undefined,
+      segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
+    });
+
+    setConfigParams2({
+      algorithm: rightSimulationAlgorithm,
+      totalMemory: rightTotalMemory,
+      processes,
+      osSize: rightOsSize,
+      pageSize: rightSubAlgorithm === 'Paginacion Simple' ? rightPageSize : undefined,
+      segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
+    });
+  }, [
+    leftMemoryExponent,
+    rightMemoryExponent,
+    leftPageSizeExponent,
+    rightPageSizeExponent,
+    leftOsSize,
+    rightOsSize,
+    leftSimulationAlgorithm,
+    rightSimulationAlgorithm,
+    leftSubAlgorithm,
+    rightSubAlgorithm,
+    leftSegmentationStrategy,
+    rightSegmentationStrategy,
+    processes,
+    setConfigParams1,
+    setConfigParams2,
+  ]);
 
   const leftCurrentStep = leftSteps[Math.min(currentStep, Math.max(0, leftSteps.length - 1))] ?? null;
   const rightCurrentStep = rightSteps[Math.min(currentStep, Math.max(0, rightSteps.length - 1))] ?? null;

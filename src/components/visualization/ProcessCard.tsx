@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { Tooltip } from "../ui/Tooltip";
 import warningIcon from "../../assets/warning.svg";
-import { useComparisonStore } from "../../store/simulationStore";
+import { useComparisonStore, useSimulationStore } from "../../store/simulationStore";
 
 export const RETRO_NEUTRAL_COLORS = [
     "#A8A29E", // stone
@@ -21,6 +21,9 @@ export const RETRO_NEUTRAL_COLORS = [
 
 export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, stackArrivalTime, dataArrivalTime, heapArrivalTime, codeArrivalTime, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, stackArrivalTime?: number, dataArrivalTime?: number, heapArrivalTime?: number, codeArrivalTime?: number, onDelete?: (id: string) => void}) {
     const removeComparisonProcess = useComparisonStore((state) => state.removeProcess);
+    const simulationConfig = useSimulationStore((state) => state.configParams);
+    const comparisonConfig1 = useComparisonStore((state) => state.configParams1);
+    const comparisonConfig2 = useComparisonStore((state) => state.configParams2);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [processColor, setProcessColor] = useState(color || "#B45309");
     const [editIsOpen, setEditIsOpen] = useState(false);
@@ -35,7 +38,17 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
     const [heapArrivalValue, setHeapArrivalValue] = useState(heapArrivalTime || 0);
     const [codeArrivalValue, setCodeArrivalValue] = useState(codeArrivalTime || 0);
 
+    const committedTotalSize = (codeSize ?? 0) + (dataSize ?? 0) + (stackSize ?? 0) + (heapSize ?? 0);
     const totalSize = segmentCode + segmentData + segmentStack + segmentHeap;
+    const availableMemoryCandidates = [
+        simulationConfig,
+        comparisonConfig1,
+        comparisonConfig2,
+    ]
+        .filter((config): config is NonNullable<typeof config> => config !== null)
+        .map((config) => Math.max(0, config.totalMemory - (config.osSize ?? 0)));
+    const availableMemory = availableMemoryCandidates.length > 0 ? Math.min(...availableMemoryCandidates) : null;
+    const showSizeWarning = availableMemory !== null && totalSize > availableMemory;
 
     const toPercent = (value: number) => {
         if (totalSize === 0) return 0;
@@ -65,8 +78,95 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
         setIsColorModalOpen(false);
     };
 
-    const updateTimingField = (field: "arrivalTime" | "duration" | "stackArrivalTime" | "dataArrivalTime" | "heapArrivalTime" | "codeArrivalTime", value: number) => {
-        if (!id) return;
+    const resetDraftFromProps = () => {
+        setProcessColor(color || "#B45309");
+        setSegmentCode(codeSize || 120);
+        setSegmentData(dataSize || 250);
+        setSegmentStack(stackSize || 64);
+        setSegmentHeap(heapSize || 250);
+        setArrivalValue(arrivalTime || 0);
+        setDurationValue(duration || 0);
+        setStackArrivalValue(stackArrivalTime || 0);
+        setDataArrivalValue(dataArrivalTime || 0);
+        setHeapArrivalValue(heapArrivalTime || 0);
+        setCodeArrivalValue(codeArrivalTime || 0);
+    };
+
+    const closeEditModal = () => {
+        resetDraftFromProps();
+        setEditIsOpen(false);
+    };
+
+    useEffect(() => {
+        if (editIsOpen) {
+            return;
+        }
+        resetDraftFromProps();
+    }, [
+        editIsOpen,
+        color,
+        codeSize,
+        dataSize,
+        stackSize,
+        heapSize,
+        arrivalTime,
+        duration,
+        stackArrivalTime,
+        dataArrivalTime,
+        heapArrivalTime,
+        codeArrivalTime,
+    ]);
+
+    const handleArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setArrivalValue(nextValue);
+    };
+
+    const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setDurationValue(nextValue);
+    };
+
+    const handleStackArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setStackArrivalValue(nextValue);
+    };
+
+    const handleDataArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setDataArrivalValue(nextValue);
+    };
+
+    const handleHeapArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setHeapArrivalValue(nextValue);
+    };
+
+    const handleCodeArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setCodeArrivalValue(nextValue);
+    };
+
+    const applyProcessEdits = () => {
+        if (!id) {
+            setEditIsOpen(false);
+            return;
+        }
+
+        const updatedProcessData = {
+            codeSize: segmentCode,
+            dataSize: segmentData,
+            stackSize: segmentStack,
+            heapSize: segmentHeap,
+            size: totalSize,
+            arrivalTime: arrivalValue,
+            duration: durationValue,
+            codeArrivalTime: codeArrivalValue,
+            dataArrivalTime: dataArrivalValue,
+            stackArrivalTime: stackArrivalValue,
+            heapArrivalTime: heapArrivalValue,
+            color: processColor,
+        };
 
         useComparisonStore.setState((state) => {
             if (!state.processes) return state;
@@ -74,57 +174,42 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
             return {
                 ...state,
                 processes: state.processes.map((process) =>
-                    process.id === id ? { ...process, [field]: value } : process,
+                    process.id === id ? { ...process, ...updatedProcessData } : process,
                 ),
             };
         });
+
+        useSimulationStore.setState((state) => {
+            if (!state.processes) return state;
+
+            return {
+                ...state,
+                processes: state.processes.map((process) =>
+                    process.id === id ? { ...process, ...updatedProcessData } : process,
+                ),
+            };
+        });
+
+        setEditIsOpen(false);
     };
 
-    const handleArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setArrivalValue(nextValue);
-        updateTimingField("arrivalTime", nextValue);
-    };
+    const committedUtilization = availableMemory && availableMemory > 0
+        ? Math.round((committedTotalSize / availableMemory) * 100)
+        : null;
 
-    const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setDurationValue(nextValue);
-        updateTimingField("duration", nextValue);
-    };
-
-    const handleStackArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setStackArrivalValue(nextValue);
-        updateTimingField("stackArrivalTime", nextValue);
-    };
-
-    const handleDataArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setDataArrivalValue(nextValue);
-        updateTimingField("dataArrivalTime", nextValue);
-    };
-
-    const handleHeapArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setHeapArrivalValue(nextValue);
-        updateTimingField("heapArrivalTime", nextValue);
-    };
-
-    const handleCodeArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const nextValue = Math.max(0, Number(event.target.value) || 0);
-        setCodeArrivalValue(nextValue);
-        updateTimingField("codeArrivalTime", nextValue);
-    };
-
-    // Mock stats for tooltip
     const tooltipContent = (
         <div className="text-xs space-y-1">
             <div className="text-lg">ID: {id}</div>
-            <div className="text-lg"><span className="font-bold">Estado:</span> En espera</div>
-            <div className="text-lg"><span className="font-bold">Eficiencia:</span> 92%</div>
-            <div className="text-lg"><span className="font-bold">Tiempo esperado:</span> 5 ciclos</div>
-            <div className="text-lg"><span className="font-bold">Fragmentación:</span> 2.1%</div>
-            <div className="text-lg"><span className="font-bold">Prioridad:</span> Alta</div>
+            <div className="text-lg">Código: {codeSize ?? 0}KB</div>
+            <div className="text-lg">Datos: {dataSize ?? 0}KB</div>
+            <div className="text-lg">Stack: {stackSize ?? 0}KB</div>
+            <div className="text-lg">Heap: {heapSize ?? 0}KB</div>
+            {availableMemory !== null && (
+                <div className="text-lg">Memoria útil: {availableMemory}KB</div>
+            )}
+            {committedUtilization !== null && (
+                <div className="text-lg">Uso sobre memoria útil: {committedUtilization}%</div>
+            )}
         </div>
     );
 
@@ -134,9 +219,9 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                 <div className="border-2 border-[#111] bg-[#ececec] h-fit p-4 cursor-help">
                     <div>
                         <h4 className="text-lg font-bold mb-2">{name}</h4>
-                        <p>Tamano: {totalSize}KB</p>
-                        <p>Llegada: {arrivalValue} t</p>
-                        <p>Duracion: {durationValue} ciclos</p>
+                        <p>Tamano: {committedTotalSize}KB</p>
+                        <p>Llegada: {arrivalTime ?? 0} t</p>
+                        <p>Duracion: {duration ?? 0} ciclos</p>
                         <div className="flex items-center gap-2">
                             <p>Color:</p>
                             <button
@@ -152,7 +237,10 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                     <hr className="mx-5 h-1 text-slate-500 my-5" />
                     <div className="justify-right">
                         <div className="flex flex-row gap-2 justify-end">
-                        <Button variant="info" className="mr-2" onClick={() => setEditIsOpen(true)}>
+                        <Button variant="info" className="mr-2" onClick={() => {
+                            resetDraftFromProps();
+                            setEditIsOpen(true);
+                        }}>
                             Editar
                         </Button>
                         <Button onClick={() => id && (onDelete ? onDelete(id.toString()) : removeComparisonProcess(id.toString()))} variant="primary">Eliminar</Button>
@@ -163,7 +251,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
             {editIsOpen && (
                 <Modal
                     isOpen={editIsOpen}
-                    onClose={() => setEditIsOpen(false)}
+                    onClose={closeEditModal}
                     title="EDITAR PROCESO"
                     maxWidth="max-w-4xl"
                     overlayClassName="bg-black/70 backdrop-blur-sm"
@@ -171,15 +259,26 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                     headerClassName="border-b-2 border-[#111] bg-[#d4d4d4]"
                     bodyClassName="bg-[#efefef]"
                 >
-                    <form className="border-2 border-[#111] bg-[#f5f5f5] p-4" onSubmit={(event) => event.preventDefault()}>
+                    <form
+                        className="border-2 border-[#111] bg-[#f5f5f5] p-4"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            if (showSizeWarning) {
+                                return;
+                            }
+                            applyProcessEdits();
+                        }}
+                    >
                         <div className="mb-4 flex items-start justify-between gap-4 border-b-2 border-[#111] pb-3">
                             <div className="text-center items-center justify-center">
                                 <h3 className="mx-auto">{name}</h3>
                             </div>
                             <div className="min-w-40 gap-5 border-2 flex flex-row border-[#111] bg-white px-3 py-2 text-right">
-                                <Tooltip content="El proceso es mas grande que el espacio disponible">
-                                    <img className="w-[40px] h-[40px] my-auto" src={warningIcon} alt="Warning"/>
-                                </Tooltip>
+                                {showSizeWarning && (
+                                    <Tooltip content={`El proceso (${totalSize}KB) supera la memoria util (${availableMemory}KB)`}>
+                                        <img className="w-10 h-10 my-auto" src={warningIcon} alt="Warning"/>
+                                    </Tooltip>
+                                )}
                                 <div className="flex flex-col">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#4b5563]">Tamaño total</p>
                                     <p className="text-xl font-black">{totalSize} KB</p>
@@ -288,10 +387,10 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                         </div>
 
                         <div className="mt-4 flex justify-end gap-2 border-t-2 border-[#111] pt-3">
-                            <Button variant="secondary" type="button" onClick={() => setEditIsOpen(false)}>
+                            <Button variant="secondary" type="button" onClick={closeEditModal}>
                                 Cancelar
                             </Button>
-                            <Button variant="primary" type="submit">
+                            <Button variant="primary" type="submit" disabled={showSizeWarning}>
                                 Guardar
                             </Button>
                         </div>

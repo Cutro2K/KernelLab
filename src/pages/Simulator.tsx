@@ -173,6 +173,17 @@ export default function Simulator() {
     setSteps([]);
   }, [algorithm, segmentationStrategy, allocationMode, memoriaGuardada, osGuardado, pageSize, processes.length, pause, setStoreCurrentStep]);
 
+  useEffect(() => {
+    setConfigParams({
+      algorithm,
+      totalMemory: memoriaGuardada,
+      osSize: osGuardado,
+      processes,
+      pageSize: PAGING_ALGORITHMS.includes(algorithm) ? pageSize : undefined,
+      segmentationStrategy: algorithm === 'Segmentacion' ? segmentationStrategy : undefined,
+    });
+  }, [algorithm, memoriaGuardada, osGuardado, processes, pageSize, segmentationStrategy, setConfigParams]);
+
   const occupiedMemory = memoryState?.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0) ?? 0;
   const freeMemory = Math.max(0, memoriaGuardada - occupiedMemory);
   const runningCount = memoryState?.filter((block) => !block.isFree && block.process).length ?? 0;

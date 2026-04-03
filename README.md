@@ -1,73 +1,105 @@
-# React + TypeScript + Vite
+# KernelLab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+KernelLab is an interactive memory-management simulator built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+It lets you:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Define processes with code/data/stack/heap segments.
+- Simulate contiguous and non-contiguous allocation strategies step by step.
+- Compare two algorithms side by side using the same process set.
+- Visualize memory state, queue behavior, and runtime statistics.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite 8
+- Tailwind CSS 4
+- Zustand (state management)
+- Framer Motion (animations)
+- React Router DOM
 
-## Expanding the ESLint configuration
+## Scripts
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Available scripts:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `npm run dev`: start development server.
+- `npm run build`: type-check and build production bundle.
+- `npm run preview`: preview production build.
+- `npm run lint`: run ESLint.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Main Pages
+
+- `/`: Home
+- `/simulator`: single-algorithm simulation with step controls
+- `/comparison`: side-by-side algorithm comparison
+- `/about`: project documentation page
+
+## Algorithms Included
+
+Contiguous allocation:
+
+- First Fit
+- Best Fit
+- Worst Fit
+- Next Fit
+- Buddy System
+
+Non-contiguous:
+
+- Paging (`Paginacion Simple`) with replacement strategies:
+  - OPT
+  - FIFO
+  - LRU
+  - NRU
+  - Segunda Oportunidad
+  - Clock
+- Segmentation (`Segmentacion`)
+
+## Project Structure
+
+```text
+KernelLab/
+├─ public/
+├─ src/
+│  ├─ algorithms/
+│  │  ├─ allocation/
+│  │  ├─ nonContiguous/
+│  │  ├─ paging/
+│  │  ├─ replacement/
+│  │  ├─ segmentation/
+│  │  ├─ stepStats.ts
+│  │  └─ types.ts
+│  ├─ assets/
+│  ├─ components/
+│  │  ├─ forms/
+│  │  ├─ layout/
+│  │  ├─ ui/
+│  │  └─ visualization/
+│  ├─ hooks/
+│  ├─ pages/
+│  │  ├─ Home.tsx
+│  │  ├─ Simulator.tsx
+│  │  ├─ Comparison.tsx
+│  │  └─ About.tsx
+│  ├─ store/
+│  ├─ utils/
+│  ├─ App.tsx
+│  └─ main.tsx
+├─ tests/
+├─ eslint.config.js
+├─ index.html
+├─ package.json
+├─ tsconfig*.json
+└─ vite.config.ts
 ```
+
+## Notes
+
+- Process validation in add/edit forms blocks saving when process size exceeds usable memory (`totalMemory - osSize`).
+- The repository currently contains a `tests/slgorithms` directory (name preserved as-is).

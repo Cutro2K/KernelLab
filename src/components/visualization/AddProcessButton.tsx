@@ -3,6 +3,9 @@ import { type Process } from '../../algorithms/types';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { RETRO_NEUTRAL_COLORS } from './ProcessCard';
+import { Tooltip } from '../ui/Tooltip';
+import warningIcon from '../../assets/warning.svg';
+import { useComparisonStore, useSimulationStore } from '../../store/simulationStore';
 
 type AddProcessButtonProps = {
   processes: Process[];
@@ -59,9 +62,21 @@ export function AddProcessButton({
 }: AddProcessButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<ProcessDraft | null>(null);
+  const simulationConfig = useSimulationStore((state) => state.configParams);
+  const comparisonConfig1 = useComparisonStore((state) => state.configParams1);
+  const comparisonConfig2 = useComparisonStore((state) => state.configParams2);
 
   const nextProcessNumber = useMemo(() => getNextProcessNumber(processes), [processes]);
   const totalSize = (draft?.codeSize ?? 0) + (draft?.dataSize ?? 0) + (draft?.stackSize ?? 0) + (draft?.heapSize ?? 0);
+  const availableMemoryCandidates = [
+    simulationConfig,
+    comparisonConfig1,
+    comparisonConfig2,
+  ]
+    .filter((config): config is NonNullable<typeof config> => config !== null)
+    .map((config) => Math.max(0, config.totalMemory - (config.osSize ?? 0)));
+  const availableMemory = availableMemoryCandidates.length > 0 ? Math.min(...availableMemoryCandidates) : null;
+  const showSizeWarning = availableMemory !== null && totalSize > availableMemory;
 
   const openModal = () => {
     setDraft(createRandomDraft(nextProcessNumber));
@@ -74,7 +89,7 @@ export function AddProcessButton({
   };
 
   const handleSave = () => {
-    if (!draft) return;
+    if (!draft || showSizeWarning) return;
 
     const process: Process = {
       id: `P${nextProcessNumber}`,
@@ -136,6 +151,11 @@ export function AddProcessButton({
                 />
               </div>
               <div className="min-w-40 gap-2 border-2 flex flex-col border-[#111] bg-white px-3 py-2 text-right">
+                {showSizeWarning && (
+                  <Tooltip content={`El proceso (${totalSize}KB) supera la memoria util (${availableMemory}KB)`}>
+                    <img className="w-10 h-10 self-end" src={warningIcon} alt="Warning" />
+                  </Tooltip>
+                )}
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#4b5563]">Tamaño total</p>
                 <p className="text-xl font-black">{totalSize} KB</p>
               </div>
@@ -201,7 +221,7 @@ export function AddProcessButton({
               <Button variant="secondary" type="button" onClick={closeModal}>
                 Cancelar
               </Button>
-              <Button variant="primary" type="button" onClick={handleSave}>
+              <Button variant="primary" type="button" onClick={handleSave} disabled={showSizeWarning}>
                 Guardar
               </Button>
             </div>
