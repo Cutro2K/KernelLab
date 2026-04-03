@@ -42,25 +42,25 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
     </div>
   );
   const previousIsFree = useRef(block.isFree);
-  const [releasePulse, setReleasePulse] = useState(false);
+  const [allocationFade, setAllocationFade] = useState(false);
 
   useEffect(() => {
-    const wasReleased = !previousIsFree.current && block.isFree;
+    const wasAllocated = previousIsFree.current && !block.isFree;
     previousIsFree.current = block.isFree;
 
-    if (!wasReleased) {
+    if (!wasAllocated || !isPagedSegment) {
       return;
     }
 
-    setReleasePulse(true);
+    setAllocationFade(true);
     const timeoutId = window.setTimeout(() => {
-      setReleasePulse(false);
-    }, 440);
+      setAllocationFade(false);
+    }, 320);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [block.isFree]);
+  }, [block.isFree, isPagedSegment]);
 
   return (
     <Tooltip content={tooltipContent} wrapperClassName="contents">
@@ -68,27 +68,16 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
       layout
       initial={{ opacity: 0, y: 8, scaleY: 0.92 }}
       animate={{
-        opacity: 1,
+        opacity: allocationFade ? [0.2, 1] : 1,
         y: 0,
         scaleY: 1,
-        boxShadow: releasePulse
-          ? [
-              'inset 0 0 0 rgba(34,197,94,0)',
-              'inset 0 0 0 4px rgba(34,197,94,0.55)',
-              'inset 0 0 0 rgba(34,197,94,0)',
-            ]
-          : 'inset 0 0 0 rgba(34,197,94,0)',
-        filter: releasePulse
-          ? ['saturate(1)', 'saturate(1.3)', 'saturate(1)']
-          : 'saturate(1)',
       }}
       exit={{ opacity: 0, y: -8, scaleY: 0.92 }}
       transition={{
         duration: 0.24,
         ease: 'easeOut',
         layout: { duration: 0.28 },
-        boxShadow: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
-        filter: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
+        opacity: { duration: allocationFade ? 0.32 : 0.24, ease: 'easeOut' },
       }}
       className={`
         relative h-full border-y-2 border-l-2 border-black flex flex-col justify-center items-center overflow-hidden transition-all duration-300 ${isLast ? 'border-r-2' : ''}
