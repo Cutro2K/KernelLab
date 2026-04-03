@@ -1,6 +1,7 @@
 import { calculateStats } from '../../utils/helpers';
 import { MemoryBlock } from './MemoryBlock';
 import { useSimulationStore } from '../../store/simulationStore';
+import { AnimatePresence } from 'framer-motion';
 
 interface MemoryMapProps {
   className?: string;
@@ -22,15 +23,17 @@ export function MemoryMap({className = '', }: MemoryMapProps) {
   const stats = calculateStats(memoryState, totalMemory);
 
   return (
-    <div className={`flex flex-col gap-2 flex-1 w-[500px] h-full bg-gray-100 border-2 border-black shadow-md overflow-hidden ${className}`}>        
+    <div className={`flex flex-col gap-2 w-full h-full bg-gray-100 border-2 border-black shadow-md overflow-hidden ${className}`}>        
         <div className="flex flex-row mt-2 mx-2 flex-1 overflow-x-auto bg-gray-50">
-          {memoryState.map((block) => (
-            <MemoryBlock 
-              key={block.id} 
-              block={block} 
-              totalMemory={totalMemory} 
-            />
-          ))}
+          <AnimatePresence initial={false} mode="popLayout">
+            {memoryState.map((block) => (
+              <MemoryBlock 
+                key={block.id} 
+                block={block} 
+                totalMemory={totalMemory} 
+              />
+            ))}
+          </AnimatePresence>
         </div>
         <div className="mx-auto px-3 mb-2 border-2 border-black">
           {stats.memoryUsage}%

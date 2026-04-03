@@ -6,8 +6,11 @@ import { type Process, type SimulationStep, type SimulationConfig, type Algorith
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 import { useSimulationStore } from "../store/simulationStore";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ProcessQueue } from "../components/visualization/ProcessQueue";
+import { cloneMemoryState, computeStats, runAllocationSimulation } from "../hooks/useAlgorithm";
+import { useStepController } from "../hooks/useStepController";
+import { AddProcessButton } from "../components/visualization/AddProcessButton";
 
 
 export const SimProcessList = () => {
@@ -41,12 +44,32 @@ export const SimProcessList = () => {
 
 export default function Simulator() {
   const addProcess = useSimulationStore((state) => state.addProcess);
+  const processes = useSimulationStore((state) => state.processes ?? []);
+  const memoryState = useSimulationStore((state) => state.memoryState);
+  const stats = useSimulationStore((state) => state.statistics);
+  const setMemoryState = useSimulationStore((state) => state.setMemoryState);
+  const setStatistics = useSimulationStore((state) => state.setStatistics);
+  const setStoreCurrentStep = useSimulationStore((state) => state.setCurrentStep);
+  const setConfigParams = useSimulationStore((state) => state.setConfigParams);
   const processCount = useSimulationStore((state) => state.processes?.length ?? 0);
   const [steps, setSteps] = useState<SimulationStep[]>([]);
-  const [memoriaGuardada, setMemoriaGuardada] = useState<number>(0);
-  const [osGuardado, setOsGuardado] = useState<number>(0);
-  const [algorithm, setAlgorithm] = useState('First Fit');
+  const [memoriaGuardada, setMemoriaGuardada] = useState<number>(512);
+  const [osGuardado, setOsGuardado] = useState<number>(64);
+  const [algorithm, setAlgorithm] = useState<AlgorithmOption>('First Fit');
   const [allocationMode, setAllocationMode] = useState('Contigua');
+  const [autoPlayPending, setAutoPlayPending] = useState(false);
+  const maxStep = Math.max(0, steps.length - 1);
+  const {
+    currentStep,
+    isRunning,
+    play,
+    pause,
+    stepForward,
+    stepBackward,
+    reset,
+  } = useStepController({ maxStep, intervalMs: 1000 });
+  const currentSimulationStep = steps[Math.min(currentStep, Math.max(0, steps.length - 1))] ?? null;
+
   const handleRandomProcesses = () => {
     const totalToAdd = Math.floor(Math.random() * 5) + 3;
 
@@ -77,20 +100,72 @@ export default function Simulator() {
   // Variables para prueba de visualizacion de memoria (en un futuro esto vendrá del estado de la simulación)
   const [isViewProces, setViewProces] = useState(false);
 
-  const config: SimulationConfig = {
-      algorithm: algorithm as AlgorithmOption,
+  const runSimulation = () => {
+    const config: SimulationConfig = {
+      algorithm,
       totalMemory: memoriaGuardada,
-      processes: useSimulationStore((state) => state.processes) ?? [],
+      processes,
       osSize: osGuardado,
     };
 
-  useSimulationStore.setState((prevState) => ({
-        ...prevState,
-        allocationStrategy: allocationMode,
-        algorithm : algorithm as AlgorithmOption,
-        currentStep: 0,
-        configParams : config
-      }));
+    const generatedSteps = runAllocationSimulation(algorithm, processes, config);
+    setSteps(generatedSteps);
+    setConfigParams(config);
+
+    useSimulationStore.setState((prevState) => ({
+      ...prevState,
+      allocationStrategy: allocationMode,
+      algorithm,
+      currentStep: 0,
+      configParams: config,
+    }));
+
+    return generatedSteps;
+  };
+
+  const handlePlay = () => {
+    if (steps.length === 0) {
+      runSimulation();
+      setAutoPlayPending(true);
+      return;
+    }
+    play();
+  };
+
+  useEffect(() => {
+    if (!autoPlayPending) {
+      return;
+    }
+
+    if (maxStep > 0) {
+      play();
+    }
+
+    setAutoPlayPending(false);
+  }, [autoPlayPending, maxStep, play]);
+
+  useEffect(() => {
+    if (!currentSimulationStep) {
+      return;
+    }
+
+    setMemoryState(cloneMemoryState(currentSimulationStep.memoryState));
+    setStatistics(currentSimulationStep.stats ?? computeStats(currentSimulationStep.memoryState, memoriaGuardada));
+    setStoreCurrentStep(currentStep);
+  }, [currentSimulationStep, currentStep, memoriaGuardada, setMemoryState, setStatistics, setStoreCurrentStep]);
+
+  useEffect(() => {
+    pause();
+    setStoreCurrentStep(0);
+    setSteps([]);
+  }, [algorithm, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
+
+  const occupiedMemory = memoryState?.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0) ?? 0;
+  const freeMemory = Math.max(0, memoriaGuardada - occupiedMemory);
+  const runningCount = memoryState?.filter((block) => !block.isFree && block.process).length ?? 0;
+  const finishedCount = processes.filter((process) => process.arrivalTime + process.duration <= currentStep).length;
+  const waitingCount = Math.max(0, processes.length - runningCount - finishedCount);
+
   return (
     
     <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
@@ -107,7 +182,12 @@ export default function Simulator() {
         </div>
         
         <div className="flex flex-col gap-2 mt-2">
-          <Button variant="primary" className="border-2 border-black">[+ Agregar]</Button>
+          <AddProcessButton
+            processes={processes}
+            onAddProcess={addProcess}
+            className="border-2 border-black"
+            buttonLabel="[+ Agregar]"
+          />
           <Button variant="secondary" onClick={handleRandomProcesses} className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
         </div>
       </div>
@@ -127,36 +207,49 @@ export default function Simulator() {
         />
         <AlgorithmConfig 
         onConfigSave={({ algorithm , allocationMode}) => {
-          setAlgorithm(algorithm);
+          setAlgorithm(algorithm as AlgorithmOption);
           setAllocationMode(allocationMode);
         }} 
         />
+
+        <div className="px-2">
+          <Button variant="primary" className="border-2 border-black" onClick={() => {
+            runSimulation();
+            reset();
+          }}>
+            [INICIAR SIMULACIÓN]
+          </Button>
+        </div>
         
         <h1 className="text-lg font-bold pl-2 pb-1 border-b-2 border-black">&curren; VISUALIZACIÓN DE MEMORIA</h1>
         
         <p className="px-2 text-sm text-center">Particiones (dirección baja &rarr; alta)</p>
         
-        <div className="w-full px-2 lg:px-6 overflow-x-auto">
+        <div className="w-full px-2 overflow-x-auto">
           <MemoryMap
-            className="mx-auto"
+            className="w-full"
           />      
         </div>
         
         <div className="mx-auto flex justify-center w-full">
           <StepControls
-            onPlay={() => console.log('Play')}
-            onPause={() => console.log('Pause')}
-            onStepForward={() => console.log('Step Forward')}
-            onStepBackward={() => console.log('Step Backward')}
-            onReset={() => console.log('Reset')}
+            onPlay={handlePlay}
+            onPause={pause}
+            onStepForward={stepForward}
+            onStepBackward={stepBackward}
+            onReset={reset}
+            isRunning={isRunning}
           />
         </div>
-        <div className="w-full max-w-[400px] border-2 border-black mx-auto bg-transparent">
+        <p className="text-center text-xs font-bold uppercase">Paso {currentStep + 1} / {maxStep + 1}</p>
+        <div className="w-full px-2">
+          <div className="w-full min-h-[200px] border-2 border-black bg-transparent">
             <p className="p-4 leading-relaxed text-sm">
-              &curren; PASO 3: <br/> <br /> 
-              "Best Fit asigna P1 (40KB) al bloque libre de 52KB en posición 460KB. <br /> 
-              Fragmentación interna: 12KB"
-            </p>   
+              {currentSimulationStep?.description
+                ? `¤ ${currentSimulationStep.description}`
+                : 'Iniciá la simulación para ver el detalle de cada paso.'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -169,31 +262,31 @@ export default function Simulator() {
 
         {/* Info Básica */}
         <div className="flex flex-col gap-2 border-b-2 border-black pb-4 text-sm">
-          <div className="flex justify-between"><span>Total:</span> <span>512KB</span></div>
-          <div className="flex justify-between"><span>Usado:</span> <span>320KB</span></div>
-          <div className="flex justify-between"><span>Libre:</span> <span>192KB</span></div>
+          <div className="flex justify-between"><span>Total:</span> <span>{memoriaGuardada}KB</span></div>
+          <div className="flex justify-between"><span>Usado:</span> <span>{occupiedMemory}KB</span></div>
+          <div className="flex justify-between"><span>Libre:</span> <span>{freeMemory}KB</span></div>
         </div>
 
         {/* Barra de Progreso Visual */}
         <div className="py-4 border-b-2 border-black flex flex-col items-center gap-2">
           <div className="w-full h-8 border-2 border-black flex p-1">
-            <div className="h-full bg-black/80 w-[62.5%] transition-all"></div>
+            <div className="h-full bg-black/80 transition-all" style={{ width: `${stats?.memoryUsage ?? 0}%` }}></div>
           </div>
-          <span className="text-sm border-2 border-black px-2 mt-1">62.5%</span>
+          <span className="text-sm border-2 border-black px-2 mt-1">{stats?.memoryUsage ?? 0}%</span>
         </div>
 
         {/* Detalle de Fragmentación */}
         <div className="flex flex-col gap-2 py-4 border-b-2 border-black text-sm">
-          <div className="flex justify-between"><span>Frag ext:</span> <span>192KB</span></div>
-          <div className="flex justify-between"><span>Bloq libre:</span> <span>2</span></div>
-          <div className="flex justify-between"><span>Bloq ocup:</span> <span>3</span></div>
+          <div className="flex justify-between"><span>Frag ext:</span> <span>{stats?.externalFragmentation ?? 0}%</span></div>
+          <div className="flex justify-between"><span>Bloq libre:</span> <span>{memoryState?.filter((block) => block.isFree).length ?? 0}</span></div>
+          <div className="flex justify-between"><span>Bloq ocup:</span> <span>{memoryState?.filter((block) => !block.isFree).length ?? 0}</span></div>
         </div>
 
         {/* Info de Cola */}
         <div className="flex flex-col gap-2 pt-4 text-sm">
-          <div className="flex justify-between"><span>Activos:</span> <span>3/5</span></div>
-          <div className="flex justify-between"><span>Espera:</span> <span>2</span></div>
-          <div className="flex justify-between"><span>Rechazados:</span> <span>0</span></div>
+          <div className="flex justify-between"><span>Activos:</span> <span>{runningCount}/{processes.length}</span></div>
+          <div className="flex justify-between"><span>Espera:</span> <span>{waitingCount}</span></div>
+          <div className="flex justify-between"><span>Finalizados:</span> <span>{finishedCount}</span></div>
         </div>
         <div className="flex flex-col gap-2 mt-2">
           <Button 
