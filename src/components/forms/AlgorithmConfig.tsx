@@ -1,10 +1,11 @@
 // IMPORTS
-import { useState , useEffect} from "react";
-import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS } from '../../algorithms/types';
+import { useState, useEffect } from "react";
+import { CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS, ALLOCATIONS} from '../../algorithms/types';
+
 // INTERFACES
 interface AlgorithmConfigProps {
     className?: string;
-    onConfigSave: (algorithmData: { algorithm: string; allocationMode: string }) => void;
+    onConfigSave: (algorithmData: { algorithm: string; allocationMode: string; replacementAlgorithm: string }) => void;
 }
 
 interface MemoryConfigProps {
@@ -57,8 +58,8 @@ export function AlgorithmConfig({ className, onConfigSave }: AlgorithmConfigProp
     };
 
     useEffect(() => {
-        onConfigSave({ algorithm, allocationMode });
-    }, [algorithm, allocationMode]);
+        onConfigSave({ algorithm, allocationMode, replacementAlgorithm });
+    }, [algorithm, allocationMode, replacementAlgorithm, onConfigSave]);
 
     const manejarCambioAlgoritmo = (nuevoValor: string) => {
         setAlgoritmoSeleccionado(nuevoValor);
@@ -120,9 +121,11 @@ export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
         }
     };
 
-        useEffect(() => {
+    useEffect(() => {
         onConfigSave({ totalMemory, osSize });
-    }, [totalMemory, osSize]);
+    }, [totalMemory, osSize, onConfigSave]);
+
+
     return (
         <div className={`flex flex-col gap-4 border-2 border-black px-4 py-3 bg-[#ffb6c1]/10 ${className || ''}`}>
             <div className="flex items-center text-slate-500 font-bold text-sm tracking-widest uppercase border-b border-slate-300 pb-1">

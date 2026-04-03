@@ -12,6 +12,8 @@ import { cloneMemoryState, computeStats, runAllocationSimulation } from "../hook
 import { useStepController } from "../hooks/useStepController";
 import { AddProcessButton } from "../components/visualization/AddProcessButton";
 
+const PAGING_ALGORITHMS: AlgorithmOption[] = ['Paginacion Simple', 'OPT', 'FIFO', 'LRU', 'NRU', 'Segunda Oportunidad', 'Clock'];
+
 
 export const SimProcessList = () => {
   const processes = useSimulationStore((state) => state.processes);
@@ -56,6 +58,7 @@ export default function Simulator() {
   const [memoriaGuardada, setMemoriaGuardada] = useState<number>(512);
   const [osGuardado, setOsGuardado] = useState<number>(64);
   const [algorithm, setAlgorithm] = useState<AlgorithmOption>('First Fit');
+  const [segmentationStrategy, setSegmentationStrategy] = useState<'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit'>('First Fit');
   const [allocationMode, setAllocationMode] = useState('Contigua');
   const [autoPlayPending, setAutoPlayPending] = useState(false);
   const maxStep = Math.max(0, steps.length - 1);
@@ -79,15 +82,23 @@ export default function Simulator() {
       const dataSize = Math.floor(Math.random() * 40) + 10;
       const stackSize = Math.floor(Math.random() * 30) + 8;
       const heapSize = Math.floor(Math.random() * 50) + 12;
+      const heapArrivalTime = Math.floor(Math.random() * 20);
+      const stackArrivalTime = Math.floor(Math.random() * 5);
+      const dataArrivalTime = Math.floor(Math.random() * 10);
+      const codeArrivalTime = Math.floor(Math.random() * 15);
 
       const process: Process = {
         id: `P${processNumber}`,
         name: `Proceso ${processNumber}`,
+        size: codeSize + dataSize + stackSize + heapSize,
         codeSize,
         dataSize,
         stackSize,
         heapSize,
-        size: codeSize + dataSize + stackSize + heapSize,
+        codeArrivalTime,
+        stackArrivalTime,
+        dataArrivalTime,
+        heapArrivalTime,
         arrivalTime: Math.floor(Math.random() * 20),
         duration: Math.floor(Math.random() * 50) + 10,
         color: RETRO_NEUTRAL_COLORS[Math.floor(Math.random() * RETRO_NEUTRAL_COLORS.length)],
@@ -106,6 +117,7 @@ export default function Simulator() {
       totalMemory: memoriaGuardada,
       processes,
       osSize: osGuardado,
+      segmentationStrategy: algorithm === 'Segmentacion' ? segmentationStrategy : undefined,
     };
 
     const generatedSteps = runAllocationSimulation(algorithm, processes, config);
@@ -158,13 +170,14 @@ export default function Simulator() {
     pause();
     setStoreCurrentStep(0);
     setSteps([]);
-  }, [algorithm, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
+  }, [algorithm, segmentationStrategy, allocationMode, memoriaGuardada, osGuardado, processes.length, pause, setStoreCurrentStep]);
 
   const occupiedMemory = memoryState?.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0) ?? 0;
   const freeMemory = Math.max(0, memoriaGuardada - occupiedMemory);
   const runningCount = memoryState?.filter((block) => !block.isFree && block.process).length ?? 0;
   const finishedCount = processes.filter((process) => process.arrivalTime + process.duration <= currentStep).length;
   const waitingCount = Math.max(0, processes.length - runningCount - finishedCount);
+  const isPagingAlgorithm = PAGING_ALGORITHMS.includes(algorithm);
 
   return (
     
@@ -206,8 +219,14 @@ export default function Simulator() {
         }} 
         />
         <AlgorithmConfig 
-        onConfigSave={({ algorithm , allocationMode}) => {
-          setAlgorithm(algorithm as AlgorithmOption);
+        onConfigSave={({ algorithm , allocationMode, replacementAlgorithm}) => {
+          const selectedAlgorithm = allocationMode === 'No contigua' && algorithm === 'Paginacion Simple'
+            ? replacementAlgorithm
+            : algorithm;
+          setAlgorithm(selectedAlgorithm as AlgorithmOption);
+          if (algorithm === 'Segmentacion') {
+            setSegmentationStrategy(replacementAlgorithm as 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit');
+          }
           setAllocationMode(allocationMode);
         }} 
         />
@@ -227,7 +246,7 @@ export default function Simulator() {
         
         <div className="w-full px-2 overflow-x-auto">
           <MemoryMap
-            className="w-full"
+            className="w-full h-24"
           />      
         </div>
         
@@ -278,8 +297,12 @@ export default function Simulator() {
         {/* Detalle de Fragmentación */}
         <div className="flex flex-col gap-2 py-4 border-b-2 border-black text-sm">
           <div className="flex justify-between"><span>Frag ext:</span> <span>{stats?.externalFragmentation ?? 0}%</span></div>
+          <div className="flex justify-between"><span>Frag int:</span> <span>{stats?.internalFragmentation ?? 0}%</span></div>
           <div className="flex justify-between"><span>Bloq libre:</span> <span>{memoryState?.filter((block) => block.isFree).length ?? 0}</span></div>
           <div className="flex justify-between"><span>Bloq ocup:</span> <span>{memoryState?.filter((block) => !block.isFree).length ?? 0}</span></div>
+          {isPagingAlgorithm && (
+            <p className="text-xs text-slate-600">En paginacion, la fragmentacion externa se considera 0%.</p>
+          )}
         </div>
 
         {/* Info de Cola */}

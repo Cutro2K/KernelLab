@@ -19,7 +19,7 @@ export const RETRO_NEUTRAL_COLORS = [
 ];
     // Aquí deberías llamar a tu función de eliminación del proceso en el estado global
 
-export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, onDelete?: (id: string) => void}) {
+export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, stackArrivalTime, dataArrivalTime, heapArrivalTime, codeArrivalTime, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, stackArrivalTime?: number, dataArrivalTime?: number, heapArrivalTime?: number, codeArrivalTime?: number, onDelete?: (id: string) => void}) {
     const removeComparisonProcess = useComparisonStore((state) => state.removeProcess);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [processColor, setProcessColor] = useState(color || "#B45309");
@@ -30,6 +30,10 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
     const [segmentHeap, setSegmentHeap] = useState(heapSize || 250);
     const [arrivalValue, setArrivalValue] = useState(arrivalTime || 0);
     const [durationValue, setDurationValue] = useState(duration || 0);
+    const [stackArrivalValue, setStackArrivalValue] = useState(stackArrivalTime || 0);
+    const [dataArrivalValue, setDataArrivalValue] = useState(dataArrivalTime || 0);
+    const [heapArrivalValue, setHeapArrivalValue] = useState(heapArrivalTime || 0);
+    const [codeArrivalValue, setCodeArrivalValue] = useState(codeArrivalTime || 0);
 
     const totalSize = segmentCode + segmentData + segmentStack + segmentHeap;
 
@@ -61,7 +65,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
         setIsColorModalOpen(false);
     };
 
-    const updateTimingField = (field: "arrivalTime" | "duration", value: number) => {
+    const updateTimingField = (field: "arrivalTime" | "duration" | "stackArrivalTime" | "dataArrivalTime" | "heapArrivalTime" | "codeArrivalTime", value: number) => {
         if (!id) return;
 
         useComparisonStore.setState((state) => {
@@ -86,6 +90,30 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
         const nextValue = Math.max(0, Number(event.target.value) || 0);
         setDurationValue(nextValue);
         updateTimingField("duration", nextValue);
+    };
+
+    const handleStackArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setStackArrivalValue(nextValue);
+        updateTimingField("stackArrivalTime", nextValue);
+    };
+
+    const handleDataArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setDataArrivalValue(nextValue);
+        updateTimingField("dataArrivalTime", nextValue);
+    };
+
+    const handleHeapArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setHeapArrivalValue(nextValue);
+        updateTimingField("heapArrivalTime", nextValue);
+    };
+
+    const handleCodeArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setCodeArrivalValue(nextValue);
+        updateTimingField("codeArrivalTime", nextValue);
     };
 
     // Mock stats for tooltip
@@ -166,7 +194,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                 <SegmentInput label="Stack" value={segmentStack} onChange={setSegmentStack} />
                                 <SegmentInput label="Heap" value={segmentHeap} onChange={setSegmentHeap} />
                                 <p>OPCIONES PARA ASIGNACION CONTIGUA</p>
-                                <div className="flex flex-row">
+                                <div className="flex text-sm flex-row">
                                     <label className="w-2/3">Tiempo de llegada</label>
                                     <div className="w-1/2 gap-2 flex flex-row justify-center">
                                     <input
@@ -178,7 +206,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                     <p className="text-xs my-auto mr-2">Ciclo</p>
                                     </div>
                                 </div>
-                                <div className="flex flex-row">
+                                <div className="flex text-sm flex-row">
                                     <label className="w-2/3">Duración</label>
                                     <div className="w-1/2 gap-2 flex flex-row justify-center">
                                     <input
@@ -188,6 +216,56 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                         className="border-2 border-[#111] bg-white w-3/5 text-right"
                                     />
                                     <p className="text-xs my-auto">Ciclos</p>
+                                    </div>
+                                </div>
+                                <hr/>
+                                <p>OPCIONES PARA ASIGNACION NO CONTIGUA</p>
+                                <div className="flex text-sm flex-row">
+                                    <label className="w-2/3">Tiempo de llegada Codigo</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={codeArrivalValue}
+                                        onChange={handleCodeArrivalTimeChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto mr-2">Ciclo</p>
+                                    </div>
+                                </div>
+                                <div className="flex text-sm flex-row">
+                                    <label className="w-2/3">Tiempo de llegada Stack</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={stackArrivalValue}
+                                        onChange={handleStackArrivalTimeChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto">Ciclo</p>
+                                    </div>
+                                </div>
+                                <div className="flex text-sm flex-row">
+                                    <label className="w-2/3">Tiempo de llegada Heap</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={heapArrivalValue}
+                                        onChange={handleHeapArrivalTimeChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto">Ciclo</p>
+                                    </div>
+                                </div>
+                                <div className="flex text-sm flex-row">
+                                    <label className="w-2/3">Tiempo de llegada Datos</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={dataArrivalValue}
+                                        onChange={handleDataArrivalTimeChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto">Ciclo</p>
                                     </div>
                                 </div>
                             </div>
