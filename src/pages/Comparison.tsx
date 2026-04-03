@@ -7,21 +7,18 @@ import settingsIcon from "../assets/settings.svg";
 import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 import { type Process } from '../algorithms/types';
+import { type MemoryBlock } from '../algorithms/types';
+import { type SimulationStep, type SimulationConfig, type StepStats } from '../algorithms/types';
+import { bestFitCon } from '../algorithms/allocation/bestFit';
+import { firstFitCon } from '../algorithms/allocation/firstFit';
+import { worstFitCon } from '../algorithms/allocation/worstFit';
+import { nextFitCon } from '../algorithms/allocation/nextFit';
 
 type AlgorithmMetrics = {
   usage: number;
   fragmentation: number;
   faults: number;
   score: number;
-};
-
-type StepSnapshot = {
-  chunks: string[];
-  memoryUsage: number;
-  externalFragmentation: number;
-  internalFragmentation: number;
-  pageFaults: number;
-  waitingProcesses: number;
 };
 
 const ALGORITHM_METRICS: Record<AlgorithmOption, AlgorithmMetrics> = {
@@ -40,346 +37,6 @@ const ALGORITHM_METRICS: Record<AlgorithmOption, AlgorithmMetrics> = {
   'Segmentacion': { usage: 76, fragmentation: 20, faults: 3, score: 82 },
 };
 
-const ALGORITHM_STEPS: Record<AlgorithmOption, StepSnapshot[]> = {
-  'First Fit': [
-    {
-      chunks: ['OS', 'P1', 'FREE', 'FREE'],
-      memoryUsage: 42,
-      externalFragmentation: 12,
-      internalFragmentation: 4,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['OS', 'P1', 'P2', 'FREE'],
-      memoryUsage: 58,
-      externalFragmentation: 21,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['OS', 'P1', 'P2', 'P3'],
-      memoryUsage: 67,
-      externalFragmentation: 34,
-      internalFragmentation: 7,
-      pageFaults: 3,
-      waitingProcesses: 2,
-    },
-  ],
-  'Best Fit': [
-    {
-      chunks: ['OS', 'P1', 'FREE', 'FREE'],
-      memoryUsage: 45,
-      externalFragmentation: 10,
-      internalFragmentation: 3,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['OS', 'P1', 'P3', 'FREE'],
-      memoryUsage: 66,
-      externalFragmentation: 16,
-      internalFragmentation: 4,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['OS', 'P1', 'P3', 'P2'],
-      memoryUsage: 82,
-      externalFragmentation: 18,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 1,
-    },
-  ],
-  'Worst Fit': [
-    {
-      chunks: ['OS', 'P1', 'FREE', 'FREE'],
-      memoryUsage: 44,
-      externalFragmentation: 14,
-      internalFragmentation: 4,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['OS', 'P1', 'FREE', 'P2'],
-      memoryUsage: 61,
-      externalFragmentation: 25,
-      internalFragmentation: 6,
-      pageFaults: 3,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['OS', 'P1', 'P4', 'P2'],
-      memoryUsage: 74,
-      externalFragmentation: 29,
-      internalFragmentation: 8,
-      pageFaults: 4,
-      waitingProcesses: 2,
-    },
-  ],
-  'Next Fit': [
-    {
-      chunks: ['OS', 'P1', 'FREE', 'FREE'],
-      memoryUsage: 43,
-      externalFragmentation: 11,
-      internalFragmentation: 4,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['OS', 'P1', 'P2', 'FREE'],
-      memoryUsage: 64,
-      externalFragmentation: 19,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['OS', 'P1', 'P2', 'P3'],
-      memoryUsage: 78,
-      externalFragmentation: 24,
-      internalFragmentation: 6,
-      pageFaults: 3,
-      waitingProcesses: 2,
-    },
-  ],
-  'Buddy System': [
-    {
-      chunks: ['OS', 'B64', 'FREE', 'FREE'],
-      memoryUsage: 50,
-      externalFragmentation: 7,
-      internalFragmentation: 4,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['OS', 'B64', 'B128', 'FREE'],
-      memoryUsage: 69,
-      externalFragmentation: 9,
-      internalFragmentation: 6,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['OS', 'B64', 'B128', 'B256'],
-      memoryUsage: 84,
-      externalFragmentation: 12,
-      internalFragmentation: 7,
-      pageFaults: 2,
-      waitingProcesses: 2,
-    },
-  ],
-  'Paginacion Simple': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 52,
-      externalFragmentation: 8,
-      internalFragmentation: 6,
-      pageFaults: 2,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'Pg2'],
-      memoryUsage: 68,
-      externalFragmentation: 10,
-      internalFragmentation: 8,
-      pageFaults: 4,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg3', 'Pg1', 'Pg2'],
-      memoryUsage: 80,
-      externalFragmentation: 14,
-      internalFragmentation: 10,
-      pageFaults: 5,
-      waitingProcesses: 2,
-    },
-  ],
-  'OPT': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 58,
-      externalFragmentation: 7,
-      internalFragmentation: 5,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg0', 'Pg2', 'Pg3'],
-      memoryUsage: 74,
-      externalFragmentation: 9,
-      internalFragmentation: 6,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg4', 'Pg2', 'Pg3'],
-      memoryUsage: 86,
-      externalFragmentation: 12,
-      internalFragmentation: 7,
-      pageFaults: 3,
-      waitingProcesses: 2,
-    },
-  ],
-  'FIFO': [
-    {
-      chunks: ['SO', 'PgA', 'PgB', 'FREE'],
-      memoryUsage: 50,
-      externalFragmentation: 9,
-      internalFragmentation: 6,
-      pageFaults: 3,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'PgA', 'PgC', 'PgD'],
-      memoryUsage: 65,
-      externalFragmentation: 12,
-      internalFragmentation: 8,
-      pageFaults: 5,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'PgE', 'PgC', 'PgD'],
-      memoryUsage: 73,
-      externalFragmentation: 16,
-      internalFragmentation: 9,
-      pageFaults: 7,
-      waitingProcesses: 2,
-    },
-  ],
-  'LRU': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 55,
-      externalFragmentation: 8,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg0', 'Pg2', 'Pg3'],
-      memoryUsage: 70,
-      externalFragmentation: 11,
-      internalFragmentation: 7,
-      pageFaults: 3,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg4', 'Pg2', 'Pg3'],
-      memoryUsage: 81,
-      externalFragmentation: 13,
-      internalFragmentation: 8,
-      pageFaults: 4,
-      waitingProcesses: 2,
-    },
-  ],
-  'NRU': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 53,
-      externalFragmentation: 10,
-      internalFragmentation: 6,
-      pageFaults: 3,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg2', 'Pg1', 'Pg3'],
-      memoryUsage: 68,
-      externalFragmentation: 12,
-      internalFragmentation: 7,
-      pageFaults: 5,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg2', 'Pg4', 'Pg3'],
-      memoryUsage: 78,
-      externalFragmentation: 15,
-      internalFragmentation: 8,
-      pageFaults: 6,
-      waitingProcesses: 2,
-    },
-  ],
-  'Segunda Oportunidad': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 54,
-      externalFragmentation: 9,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg0', 'Pg2', 'Pg3'],
-      memoryUsage: 70,
-      externalFragmentation: 11,
-      internalFragmentation: 7,
-      pageFaults: 4,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg5', 'Pg2', 'Pg3'],
-      memoryUsage: 77,
-      externalFragmentation: 15,
-      internalFragmentation: 8,
-      pageFaults: 5,
-      waitingProcesses: 2,
-    },
-  ],
-  'Clock': [
-    {
-      chunks: ['SO', 'Pg0', 'Pg1', 'FREE'],
-      memoryUsage: 54,
-      externalFragmentation: 9,
-      internalFragmentation: 5,
-      pageFaults: 2,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'Pg0', 'Pg2', 'Pg3'],
-      memoryUsage: 69,
-      externalFragmentation: 11,
-      internalFragmentation: 7,
-      pageFaults: 4,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'Pg5', 'Pg2', 'Pg3'],
-      memoryUsage: 79,
-      externalFragmentation: 14,
-      internalFragmentation: 8,
-      pageFaults: 5,
-      waitingProcesses: 2,
-    },
-  ],
-  'Segmentacion': [
-    {
-      chunks: ['SO', 'SEG-C', 'FREE', 'FREE'],
-      memoryUsage: 48,
-      externalFragmentation: 10,
-      internalFragmentation: 4,
-      pageFaults: 1,
-      waitingProcesses: 4,
-    },
-    {
-      chunks: ['SO', 'SEG-C', 'SEG-D', 'FREE'],
-      memoryUsage: 63,
-      externalFragmentation: 16,
-      internalFragmentation: 6,
-      pageFaults: 2,
-      waitingProcesses: 3,
-    },
-    {
-      chunks: ['SO', 'SEG-C', 'SEG-D', 'SEG-S'],
-      memoryUsage: 76,
-      externalFragmentation: 20,
-      internalFragmentation: 7,
-      pageFaults: 3,
-      waitingProcesses: 2,
-    },
-  ],
-};
 
 const ALGORITHM_STYLES: Record<AlgorithmOption, { fill: string; pattern: string; label: string }> = {
   'First Fit': {
@@ -450,22 +107,143 @@ const ALGORITHM_STYLES: Record<AlgorithmOption, { fill: string; pattern: string;
 };
 
 
-// Vista simplificada de bloques de memoria para un snapshot puntual del algoritmo.
-function MemoryPreview({ chunks }: { chunks: string[] }) {
+type DisplayBlock = {
+  id: string;
+  label: string;
+  size: number;
+  color?: string;
+  isFree: boolean;
+};
+
+function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[] | null; totalMemory: number }) {
+  const normalizedTotalMemory = Math.max(1, totalMemory);
+  const sourceBlocks = memoryState ?? [];
+  const displayBlocks: DisplayBlock[] =
+    sourceBlocks.length > 0
+      ? sourceBlocks.map((block) => ({
+          id: block.id,
+          label: block.isFree ? 'LIBRE' : block.process?.name ?? 'OS',
+          size: block.size,
+          color: block.process?.color ?? '#4b5563',
+          isFree: block.isFree,
+        }))
+      : [
+          {
+            id: 'free-all',
+            label: 'LIBRE',
+            size: normalizedTotalMemory,
+            isFree: true,
+          },
+        ];
+
+  const usedSize = displayBlocks.reduce((sum, block) => sum + block.size, 0);
+  if (usedSize < normalizedTotalMemory) {
+    displayBlocks.push({
+      id: 'free-remainder',
+      label: 'LIBRE',
+      size: normalizedTotalMemory - usedSize,
+      isFree: true,
+    });
+  }
+
   return (
     <div className="mt-4 border-2 border-[#111] bg-white p-3">
-      <div className="grid grid-flow-col auto-cols-fr overflow-hidden border-2 border-[#111]">
-        {chunks.map((chunk, index) => (
+      <div className="flex w-full overflow-hidden border-2 border-[#111] bg-[#f8f8f8]">
+        {displayBlocks.map((block) => (
           <div
-            key={`${chunk}-${index}`}
-            className="border-r-2 border-[#111] bg-white px-3 py-2 text-center text-xl font-bold last:border-r-0"
+            key={block.id}
+            className={`relative flex min-h-18 items-center justify-center border-r-2 border-[#111] px-2 py-2 text-center font-black last:border-r-0 ${
+              block.isFree ? 'bg-white text-[#4b5563]' : 'text-white'
+            }`}
+            style={{
+              width: `${Math.max(8, (block.size / normalizedTotalMemory) * 100)}%`,
+              backgroundColor: block.isFree ? undefined : block.color,
+            }}
           >
-            {chunk}
+            <div className="flex flex-col items-center leading-tight">
+              <span className="text-xs uppercase">{block.label}</span>
+              <span className="text-[11px] font-bold">{block.size}KB</span>
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
+  return state.map((block) => ({
+    ...block,
+    process: block.process ? { ...block.process } : null,
+  }));
+}
+
+function createInitialMemoryState(totalMemory: number, osSize: number): MemoryBlock[] {
+  const normalizedTotal = Math.max(1, totalMemory);
+  const normalizedOs = Math.min(Math.max(0, osSize), normalizedTotal);
+  const freeSize = normalizedTotal - normalizedOs;
+
+  const initialState: MemoryBlock[] = [];
+
+  if (normalizedOs > 0) {
+    initialState.push({
+      id: 'os',
+      start: 0,
+      size: normalizedOs,
+      process: null,
+      isFree: false,
+    });
+  }
+
+  if (freeSize > 0) {
+    initialState.push({
+      id: 'free-0',
+      start: normalizedOs,
+      size: freeSize,
+      process: null,
+      isFree: true,
+    });
+  }
+
+  return initialState;
+}
+
+function computeStats(memoryState: MemoryBlock[], totalMemory: number): StepStats {
+  const used = memoryState.reduce((sum, block) => sum + (block.isFree ? 0 : block.size), 0);
+  const freeBlocks = memoryState.filter((block) => block.isFree);
+  const totalFree = freeBlocks.reduce((sum, block) => sum + block.size, 0);
+  const largestFree = freeBlocks.reduce((max, block) => Math.max(max, block.size), 0);
+
+  return {
+    totalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
+    externalFragmentation: totalFree > 0 ? totalFree - largestFree : 0,
+    internalFragmentation: 0,
+    pageFaults: 0,
+    pageHits: 0,
+    memoryUsage: Math.round((used / Math.max(1, totalMemory)) * 100),
+  };
+}
+
+function runAllocationSimulation(algorithm: AlgorithmOption, processes: Process[], config: SimulationConfig): SimulationStep[] {
+  const initialState = createInitialMemoryState(config.totalMemory, config.osSize ?? 0);
+  const inputProcesses = processes.map((process) => ({ ...process }));
+
+  let steps: SimulationStep[] = [];
+  if (algorithm === 'First Fit') {
+    steps = firstFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Best Fit') {
+    steps = bestFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Worst Fit') {
+    steps = worstFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  } else if (algorithm === 'Next Fit') {
+    steps = nextFitCon(inputProcesses, cloneMemoryState(initialState), config);
+  }
+
+  if (steps.length > 0) {
+    return steps;
+  }
+
+  return [{ stepNumber: 0, memoryState: cloneMemoryState(initialState), processQueue: [], stats: computeStats(cloneMemoryState(initialState), config.totalMemory) }];
 }
 
 // Panel tipo simulador para cada lado de la comparación.
@@ -479,7 +257,13 @@ function SimulatorPanel({
   onReplacementAlgorithmChange,
   segmentationStrategy,
   onSegmentationStrategyChange,
-  step,
+  memoryExponent,
+  onMemoryExponentChange,
+  osSize,
+  onOsSizeChange,
+  memoryState,
+  stats,
+  processQueue,
   currentStep,
   maxStep,
 }: {
@@ -492,13 +276,25 @@ function SimulatorPanel({
   onReplacementAlgorithmChange: (next: AlgorithmOption) => void;
   segmentationStrategy: AlgorithmOption;
   onSegmentationStrategyChange: (next: AlgorithmOption) => void;
-  step: StepSnapshot;
+  memoryExponent: number;
+  onMemoryExponentChange: (next: number) => void;
+  osSize: number;
+  onOsSizeChange: (next: number) => void;
+  memoryState: MemoryBlock[] | null;
+  stats: {
+    memoryUsage: number;
+    pageFaults: number;
+    externalFragmentation: number;
+    internalFragmentation: number;
+  } | null;
+  processQueue: Process[];
   currentStep: number;
   maxStep: number;
 }) {
   const subAlgorithmOptions = allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS : NON_CONTIGUOUS_ALGORITHMS;
   const showReplacementSelector = subAlgorithm === 'Paginacion Simple';
   const showSegmentationSelector = subAlgorithm === 'Segmentacion';
+  const memorySize = 2 ** memoryExponent;
 
   return (
     <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.1)]">
@@ -569,6 +365,36 @@ function SimulatorPanel({
               </select>
             </label>
           )}
+
+          <div className="mt-3 space-y-2 border-t-2 border-[#111] pt-3">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <span className="min-w-35">Memoria total:</span>
+              <input
+                type="range"
+                min={6}
+                max={11}
+                step={1}
+                value={memoryExponent}
+                onChange={(event) => onMemoryExponentChange(Number(event.target.value))}
+                className="accent-black"
+              />
+              <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{memorySize}KB</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <span className="min-w-35">Tamaño del OS:</span>
+              <input
+                type="range"
+                min={32}
+                max={memorySize / 2}
+                step={16}
+                value={osSize}
+                onChange={(event) => onOsSizeChange(Number(event.target.value))}
+                className="accent-black"
+              />
+              <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{osSize}KB</span>
+            </div>
+          </div>
         </div>
 
         <div className="border-2 border-[#111] bg-white p-3">
@@ -576,18 +402,23 @@ function SimulatorPanel({
           <div className="text-xs font-bold uppercase tracking-wide text-[#4b5563]">
             Paso {currentStep + 1} / {maxStep + 1}
           </div>
-          <MemoryPreview chunks={step.chunks} />
+          <MemoryPreview memoryState={memoryState} totalMemory={memorySize} />
         </div>
 
         <div className="border-2 border-[#111] bg-white p-3">
           <h4 className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">* Estadísticas intermedias</h4>
           <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-bold">
-            <div className="border border-[#111] bg-white px-2 py-1">Uso: {step.memoryUsage}%</div>
-            <div className="border border-[#111] bg-white px-2 py-1">Fallos: {step.pageFaults}</div>
-            <div className="border border-[#111] bg-white px-2 py-1">Frag. ext: {step.externalFragmentation}%</div>
-            <div className="border border-[#111] bg-white px-2 py-1">Frag. int: {step.internalFragmentation}%</div>
+            <div className="border border-[#111] bg-white px-2 py-1">Uso: {stats ? `${stats.memoryUsage}%` : '-'}</div>
+            <div className="border border-[#111] bg-white px-2 py-1">Fallos: {stats?.pageFaults ?? '-'}</div>
+            <div className="border border-[#111] bg-white px-2 py-1">Frag. ext: {stats ? `${stats.externalFragmentation}%` : '-'}</div>
+            <div className="border border-[#111] bg-white px-2 py-1">Frag. int: {stats ? `${stats.internalFragmentation}%` : '-'}</div>
             <div className="col-span-2 border border-[#111] bg-white px-2 py-1">
-              Procesos en espera: {step.waitingProcesses}
+              <div>Procesos en espera: {processQueue.length}</div>
+              <div className="mt-1 text-xs font-semibold text-[#4b5563]">
+                {processQueue.length > 0
+                  ? processQueue.map((process) => process.name).join(', ')
+                  : 'Cola vacía'}
+              </div>
             </div>
           </div>
           <Button variant="info" className="mt-3 w-full text-sm flex items-center justify-center">
@@ -619,7 +450,17 @@ export const CompProcessList = () => {
 // Página principal de comparación: sincroniza ambos algoritmos, pasos y gráfico global.
 export default function Comparison() {
   const addProcess = useComparisonStore((state) => state.addProcess);
+  const setMemoryState1 = useComparisonStore((state) => state.setMemoryState1);
+  const setMemoryState2 = useComparisonStore((state) => state.setMemoryState2);
+  const setStatistics1 = useComparisonStore((state) => state.setStatistics1);
+  const setStatistics2 = useComparisonStore((state) => state.setStatistics2);
+  const setStoreCurrentStep = useComparisonStore((state) => state.setCurrentStep);
   const processCount = useComparisonStore((state) => state.processes?.length ?? 0);
+  const processes = useComparisonStore((state) => state.processes ?? []);
+  const leftMemoryState = useComparisonStore((state) => state.memoryState1);
+  const rightMemoryState = useComparisonStore((state) => state.memoryState2);
+  const leftStatistics = useComparisonStore((state) => state.statistics1);
+  const rightStatistics = useComparisonStore((state) => state.statistics2);
   const [allocationMode, setAllocationMode] = useState<AllocationMode>('Contigua');
   const [leftSubAlgorithm, setLeftSubAlgorithm] = useState<AlgorithmOption>('First Fit');
   const [rightSubAlgorithm, setRightSubAlgorithm] = useState<AlgorithmOption>('Best Fit');
@@ -627,7 +468,23 @@ export default function Comparison() {
   const [rightReplacementAlgorithm, setRightReplacementAlgorithm] = useState<AlgorithmOption>('LRU');
   const [leftSegmentationStrategy, setLeftSegmentationStrategy] = useState<AlgorithmOption>('First Fit');
   const [rightSegmentationStrategy, setRightSegmentationStrategy] = useState<AlgorithmOption>('Best Fit');
+  const [leftMemoryExponent, setLeftMemoryExponent] = useState(9);
+  const [rightMemoryExponent, setRightMemoryExponent] = useState(9);
+  const [leftOsSize, setLeftOsSize] = useState(64);
+  const [rightOsSize, setRightOsSize] = useState(64);
   const [currentStep, setCurrentStep] = useState(0);
+  const [leftSteps, setLeftSteps] = useState<SimulationStep[]>([]);
+  const [rightSteps, setRightSteps] = useState<SimulationStep[]>([]);
+
+  const handleLeftMemoryExponentChange = (next: number) => {
+    setLeftMemoryExponent(next);
+    setLeftOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
+  };
+
+  const handleRightMemoryExponentChange = (next: number) => {
+    setRightMemoryExponent(next);
+    setRightOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
+  };
 
   useEffect(() => {
     setLeftSubAlgorithm(allocationMode === 'Contigua' ? 'First Fit' : 'Paginacion Simple');
@@ -649,16 +506,43 @@ export default function Comparison() {
         ? rightSegmentationStrategy
         : rightSubAlgorithm;
 
-  const leftSteps = ALGORITHM_STEPS[leftAlgorithm];
-  const rightSteps = ALGORITHM_STEPS[rightAlgorithm];
-  const maxStep = Math.max(leftSteps.length, rightSteps.length) - 1;
+  const maxStep = Math.max(0, Math.max(leftSteps.length, rightSteps.length) - 1);
+  const leftCurrentStep = leftSteps[Math.min(currentStep, Math.max(0, leftSteps.length - 1))] ?? null;
+  const rightCurrentStep = rightSteps[Math.min(currentStep, Math.max(0, rightSteps.length - 1))] ?? null;
 
   useEffect(() => {
-    setCurrentStep((prevStep) => Math.min(prevStep, maxStep));
+    setCurrentStep((prev) => Math.min(prev, maxStep));
   }, [maxStep]);
 
-  const leftStepData = leftSteps[Math.min(currentStep, leftSteps.length - 1)];
-  const rightStepData = rightSteps[Math.min(currentStep, rightSteps.length - 1)];
+  useEffect(() => {
+    const leftStep = leftCurrentStep;
+    const rightStep = rightCurrentStep;
+
+    if (leftStep) {
+      const leftTotalMemory = 2 ** leftMemoryExponent;
+      setMemoryState1(cloneMemoryState(leftStep.memoryState));
+      setStatistics1(leftStep.stats ?? computeStats(leftStep.memoryState, leftTotalMemory));
+    }
+
+    if (rightStep) {
+      const rightTotalMemory = 2 ** rightMemoryExponent;
+      setMemoryState2(cloneMemoryState(rightStep.memoryState));
+      setStatistics2(rightStep.stats ?? computeStats(rightStep.memoryState, rightTotalMemory));
+    }
+
+    setStoreCurrentStep(currentStep);
+  }, [
+    currentStep,
+    leftCurrentStep,
+    rightCurrentStep,
+    leftMemoryExponent,
+    rightMemoryExponent,
+    setMemoryState1,
+    setMemoryState2,
+    setStatistics1,
+    setStatistics2,
+    setStoreCurrentStep,
+  ]);
 
   const leftMetrics = ALGORITHM_METRICS[leftAlgorithm];
   const rightMetrics = ALGORITHM_METRICS[rightAlgorithm];
@@ -709,13 +593,52 @@ export default function Comparison() {
         stackSize,
         heapSize,
         size: codeSize + dataSize + stackSize + heapSize,
-        arrivalTime: 0,
+        arrivalTime: Math.floor(Math.random() * 20),
         duration: Math.floor(Math.random() * 50) + 10,
         color: RETRO_NEUTRAL_COLORS[Math.floor(Math.random() * RETRO_NEUTRAL_COLORS.length)],
       };
 
       addProcess(process);
     }
+  };
+
+  const handleStartComparison = () => {
+    const leftTotalMemory = 2 ** leftMemoryExponent;
+    const rightTotalMemory = 2 ** rightMemoryExponent;
+
+    const leftConfig: SimulationConfig = {
+      algorithm: leftAlgorithm,
+      totalMemory: leftTotalMemory,
+      processes,
+      osSize: leftOsSize,
+    };
+
+    const rightConfig: SimulationConfig = {
+      algorithm: rightAlgorithm,
+      totalMemory: rightTotalMemory,
+      processes,
+      osSize: rightOsSize,
+    };
+
+    const generatedLeftSteps = runAllocationSimulation(leftAlgorithm, processes, leftConfig);
+    const generatedRightSteps = runAllocationSimulation(rightAlgorithm, processes, rightConfig);
+
+    setLeftSteps(generatedLeftSteps);
+    setRightSteps(generatedRightSteps);
+
+    useComparisonStore.setState((prevState) => ({
+      ...prevState,
+      allocationStrategy: allocationMode,
+      algorithm1: leftAlgorithm,
+      algorithm2: rightAlgorithm,
+      currentStep: 0,
+      configParams1: leftConfig,
+      configParams2: rightConfig,
+    }));
+
+    console.log('Comparison store snapshot:', useComparisonStore.getState());
+
+    setCurrentStep(0);
   };
 
   return (
@@ -730,6 +653,7 @@ export default function Comparison() {
             <button
               type="button"
               className="border-2 border-[#111] bg-white px-3 py-1 text-base font-bold transition hover:bg-white"
+              onClick={handleStartComparison}
             >
               [INICIAR]
             </button>
@@ -782,7 +706,13 @@ export default function Comparison() {
               setLeftSegmentationStrategy(next);
               setCurrentStep(0);
             }}
-            step={leftStepData}
+            memoryExponent={leftMemoryExponent}
+            onMemoryExponentChange={handleLeftMemoryExponentChange}
+            osSize={leftOsSize}
+            onOsSizeChange={setLeftOsSize}
+            memoryState={leftMemoryState}
+            stats={leftStatistics}
+            processQueue={leftCurrentStep?.processQueue ?? []}
             currentStep={currentStep}
             maxStep={maxStep}
           />
@@ -805,7 +735,13 @@ export default function Comparison() {
               setRightSegmentationStrategy(next);
               setCurrentStep(0);
             }}
-            step={rightStepData}
+            memoryExponent={rightMemoryExponent}
+            onMemoryExponentChange={handleRightMemoryExponentChange}
+            osSize={rightOsSize}
+            onOsSizeChange={setRightOsSize}
+            memoryState={rightMemoryState}
+            stats={rightStatistics}
+            processQueue={rightCurrentStep?.processQueue ?? []}
             currentStep={currentStep}
             maxStep={maxStep}
           />

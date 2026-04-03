@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import {type Process, type SimulationStep, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption} from '../algorithms/types';
+import {type Process, type SimulationStep, type StepStats, type SimulationConfig, type MemoryBlock, type AlgorithmOption, type AllocationMode} from '../algorithms/types';
 
 interface SimulationStore {
     algorithm: AlgorithmType | null;
@@ -17,8 +17,7 @@ interface SimulationStore {
 }
 
 interface ComparisonStore {
-    algorithm1: AlgorithmOption | null;
-    algorithm2: AlgorithmOption | null;
+    allocationStrategy: AllocationMode | null;
     processes: Process[] | null;
     addProcess: (process: Process) => void;
     removeProcess: (id: string) => void;
@@ -68,8 +67,7 @@ export const useStore = create<SimulationStore>()((set) => ({
 
 export const useComparisonStore = create<ComparisonStore>()((set) => ({
     processes: [],
-    algorithm1: null,
-    algorithm2: null,
+    allocationStrategy: null,
     memoryState1: null,
     memoryState2: null,
     configParams1: null,
@@ -95,4 +93,5 @@ export const useComparisonStore = create<ComparisonStore>()((set) => ({
     setStatistics1: (stats) => set({ statistics1: stats }),
     setStatistics2: (stats) => set({ statistics2: stats }),
     setCurrentStep: (step) => set({ currentStep: step }),
+    setAllocationStrategy: (strategy : AllocationMode) => set({ allocationStrategy: strategy }),
 }));

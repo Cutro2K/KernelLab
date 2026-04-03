@@ -28,6 +28,8 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
     const [segmentData, setSegmentData] = useState(dataSize || 250);
     const [segmentStack, setSegmentStack] = useState(stackSize || 64);
     const [segmentHeap, setSegmentHeap] = useState(heapSize || 250);
+    const [arrivalValue, setArrivalValue] = useState(arrivalTime || 0);
+    const [durationValue, setDurationValue] = useState(duration || 0);
 
     const totalSize = segmentCode + segmentData + segmentStack + segmentHeap;
 
@@ -59,6 +61,33 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
         setIsColorModalOpen(false);
     };
 
+    const updateTimingField = (field: "arrivalTime" | "duration", value: number) => {
+        if (!id) return;
+
+        useComparisonStore.setState((state) => {
+            if (!state.processes) return state;
+
+            return {
+                ...state,
+                processes: state.processes.map((process) =>
+                    process.id === id ? { ...process, [field]: value } : process,
+                ),
+            };
+        });
+    };
+
+    const handleArrivalTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setArrivalValue(nextValue);
+        updateTimingField("arrivalTime", nextValue);
+    };
+
+    const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Math.max(0, Number(event.target.value) || 0);
+        setDurationValue(nextValue);
+        updateTimingField("duration", nextValue);
+    };
+
     // Mock stats for tooltip
     const tooltipContent = (
         <div className="text-xs space-y-1">
@@ -78,8 +107,8 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                     <div>
                         <h4 className="text-lg font-bold mb-2">{name}</h4>
                         <p>Tamano: {totalSize}KB</p>
-                        <p>Llegada: {arrivalTime} t</p>
-                        <p>Duracion: {duration} ciclos</p>
+                        <p>Llegada: {arrivalValue} t</p>
+                        <p>Duracion: {durationValue} ciclos</p>
                         <div className="flex items-center gap-2">
                             <p>Color:</p>
                             <button
@@ -136,7 +165,33 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                 <SegmentInput label="Datos" value={segmentData} onChange={setSegmentData} />
                                 <SegmentInput label="Stack" value={segmentStack} onChange={setSegmentStack} />
                                 <SegmentInput label="Heap" value={segmentHeap} onChange={setSegmentHeap} />
+                                <p>OPCIONES PARA ASIGNACION CONTIGUA</p>
+                                <div className="flex flex-row">
+                                    <label className="w-2/3">Tiempo de llegada</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={arrivalValue}
+                                        onChange={handleArrivalTimeChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto mr-2">Ciclo</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-row">
+                                    <label className="w-2/3">Duración</label>
+                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                    <input
+                                        type="number"
+                                        value={durationValue}
+                                        onChange={handleDurationChange}
+                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                    />
+                                    <p className="text-xs my-auto">Ciclos</p>
+                                    </div>
+                                </div>
                             </div>
+                            
 
                             <div className="border-2 border-[#111] bg-white p-3">
                                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-[#4b5563]">Mapa de segmentos</p>
