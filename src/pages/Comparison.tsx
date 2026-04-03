@@ -118,6 +118,7 @@ type DisplayBlock = {
   size: number;
   color?: string;
   isFree: boolean;
+  isPagedSegment: boolean;
 };
 
 function AnimatedPreviewBlock({
@@ -130,7 +131,7 @@ function AnimatedPreviewBlock({
   isLast: boolean;
 }) {
   const previousIsFree = useRef(block.isFree);
-  const [releasePulse, setReleasePulse] = useState(false);
+  const [allocationFade, setAllocationFade] = useState(false);
   const widthPercent = (block.size / previewTotal) * 100;
   const showFullLabel = widthPercent >= 9;
   const showCompactLabel = widthPercent >= 4.5;
@@ -145,22 +146,22 @@ function AnimatedPreviewBlock({
   );
 
   useEffect(() => {
-    const wasReleased = !previousIsFree.current && block.isFree;
+    const wasAllocated = previousIsFree.current && !block.isFree;
     previousIsFree.current = block.isFree;
 
-    if (!wasReleased) {
+    if (!wasAllocated || !block.isPagedSegment) {
       return;
     }
 
-    setReleasePulse(true);
+    setAllocationFade(true);
     const timeoutId = window.setTimeout(() => {
-      setReleasePulse(false);
-    }, 440);
+      setAllocationFade(false);
+    }, 320);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [block.isFree]);
+  }, [block.isFree, block.isPagedSegment]);
 
   return (
     <Tooltip content={tooltipContent} wrapperClassName="contents">
@@ -168,27 +169,16 @@ function AnimatedPreviewBlock({
       layout
       initial={{ opacity: 0, y: 8, scaleY: 0.92 }}
       animate={{
-        opacity: 1,
+        opacity: allocationFade ? [0.2, 1] : 1,
         y: 0,
         scaleY: 1,
-        boxShadow: releasePulse
-          ? [
-              'inset 0 0 0 rgba(34,197,94,0)',
-              'inset 0 0 0 4px rgba(34,197,94,0.55)',
-              'inset 0 0 0 rgba(34,197,94,0)',
-            ]
-          : 'inset 0 0 0 rgba(34,197,94,0)',
-        filter: releasePulse
-          ? ['saturate(1)', 'saturate(1.3)', 'saturate(1)']
-          : 'saturate(1)',
       }}
       exit={{ opacity: 0, y: -8, scaleY: 0.92 }}
       transition={{
         duration: 0.24,
         ease: 'easeOut',
         layout: { duration: 0.28 },
-        boxShadow: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
-        filter: { duration: 0.44, times: [0, 0.35, 1], ease: 'easeOut' },
+        opacity: { duration: allocationFade ? 0.32 : 0.24, ease: 'easeOut' },
       }}
       className={`relative flex min-h-18 items-center justify-center border-[#111] py-2 text-center font-black ${
         isLast ? 'border-r-0' : 'border-r-2'
@@ -242,6 +232,7 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
           size: block.size,
           color: block.process?.color ?? '#4b5563',
           isFree: block.isFree,
+          isPagedSegment: Boolean(block.process?.parentProcessId && block.process.pageIndex !== undefined),
         }))
       : [
           {
@@ -251,6 +242,7 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
             tooltipLabel: `LIBRE - ${normalizedTotalMemory}KB`,
             size: normalizedTotalMemory,
             isFree: true,
+            isPagedSegment: false,
           },
         ];
 
@@ -263,6 +255,7 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
       tooltipLabel: `LIBRE - ${normalizedTotalMemory - usedSize}KB`,
       size: normalizedTotalMemory - usedSize,
       isFree: true,
+      isPagedSegment: false,
     });
   }
 
