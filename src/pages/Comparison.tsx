@@ -19,26 +19,70 @@ type SegmentationStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
 
 type AlgorithmMetrics = {
   usage: number;
-  fragmentation: number;
+  externalFragmentation: number;
+  internalFragmentation: number;
   faults: number;
+  avgQueue: number;
+  completion: number;
   score: number;
 };
 
-const ALGORITHM_METRICS: Record<AlgorithmOption, AlgorithmMetrics> = {
-  'First Fit': { usage: 67, fragmentation: 34, faults: 3, score: 76 },
-  'Best Fit': { usage: 82, fragmentation: 18, faults: 2, score: 91 },
-  'Worst Fit': { usage: 74, fragmentation: 29, faults: 4, score: 69 },
-  'Next Fit': { usage: 78, fragmentation: 24, faults: 3, score: 83 },
-  'Buddy System': { usage: 84, fragmentation: 12, faults: 2, score: 90 },
-  'Paginacion Simple': { usage: 80, fragmentation: 14, faults: 5, score: 84 },
-  'OPT': { usage: 86, fragmentation: 12, faults: 3, score: 93 },
-  'FIFO': { usage: 73, fragmentation: 16, faults: 7, score: 71 },
-  'LRU': { usage: 81, fragmentation: 13, faults: 4, score: 88 },
-  'NRU': { usage: 78, fragmentation: 15, faults: 6, score: 80 },
-  'Segunda Oportunidad': { usage: 77, fragmentation: 15, faults: 5, score: 83 },
-  'Clock': { usage: 79, fragmentation: 14, faults: 5, score: 85 },
-  'Segmentacion': { usage: 76, fragmentation: 20, faults: 3, score: 82 },
-};
+function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number): AlgorithmMetrics {
+  if (steps.length === 0) {
+    return {
+      usage: 0,
+      externalFragmentation: 0,
+      internalFragmentation: 0,
+      faults: 0,
+      avgQueue: 0,
+      completion: 0,
+      score: 0,
+    };
+  }
+
+  const stats = steps.map((step) => step.stats);
+  const usage = Math.round(stats.reduce((sum, item) => sum + item.memoryUsage, 0) / stats.length);
+  const externalFragmentation = Math.round(stats.reduce((sum, item) => sum + item.externalFragmentation, 0) / stats.length);
+  const internalFragmentation = Math.round(stats.reduce((sum, item) => sum + item.internalFragmentation, 0) / stats.length);
+  const faults = stats.reduce((sum, item) => sum + item.pageFaults, 0);
+  const avgQueue = Math.round(steps.reduce((sum, step) => sum + step.processQueue.length, 0) / steps.length);
+
+  const seenLoadedProcesses = new Set<string>();
+  for (const step of steps) {
+    for (const block of step.memoryState) {
+      if (block.isFree || !block.process) {
+        continue;
+      }
+      seenLoadedProcesses.add(block.process.parentProcessId ?? block.process.id);
+    }
+  }
+
+  const normalizedProcessCount = Math.max(1, totalProcesses);
+  const completion = Math.round((seenLoadedProcesses.size / normalizedProcessCount) * 100);
+
+  const usageComponent = usage * 0.35;
+  const externalFragmentationComponent = (100 - externalFragmentation) * 0.2;
+  const internalFragmentationComponent = (100 - internalFragmentation) * 0.15;
+  const queueComponent = (100 - Math.min(100, (avgQueue / normalizedProcessCount) * 100)) * 0.15;
+  const completionComponent = completion * 0.15;
+  const faultPenalty = Math.min(20, faults * 0.8);
+  const score = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        usageComponent
+        + externalFragmentationComponent
+        + internalFragmentationComponent
+        + queueComponent
+        + completionComponent
+        - faultPenalty,
+      ),
+    ),
+  );
+
+  return { usage, externalFragmentation, internalFragmentation, faults, avgQueue, completion, score };
+}
 
 
 const ALGORITHM_STYLES: Record<AlgorithmOption, { fill: string; pattern: string; label: string }> = {
@@ -651,9 +695,11 @@ export default function Comparison() {
     setStoreCurrentStep,
   ]);
 
-  const leftMetrics = ALGORITHM_METRICS[leftAlgorithmForMetrics];
-  const rightMetrics = ALGORITHM_METRICS[rightAlgorithmForMetrics];
+  const leftMetrics = buildMetricsFromSteps(leftSteps, processes.length);
+  const rightMetrics = buildMetricsFromSteps(rightSteps, processes.length);
   const betterChoice = leftMetrics.score >= rightMetrics.score ? leftAlgorithmForMetrics : rightAlgorithmForMetrics;
+  const faultsMax = Math.max(1, leftMetrics.faults, rightMetrics.faults);
+  const queueMax = Math.max(1, processes.length, leftMetrics.avgQueue, rightMetrics.avgQueue);
 
   const comparisonRows = [
     {
@@ -666,9 +712,17 @@ export default function Comparison() {
     },
     {
       label: 'Fragmentación ext.',
-      leftValue: leftMetrics.fragmentation,
-      rightValue: rightMetrics.fragmentation,
-      max: 40,
+      leftValue: leftMetrics.externalFragmentation,
+      rightValue: rightMetrics.externalFragmentation,
+      max: 100,
+      suffix: '%',
+      higherIsBetter: false,
+    },
+    {
+      label: 'Fragmentación int.',
+      leftValue: leftMetrics.internalFragmentation,
+      rightValue: rightMetrics.internalFragmentation,
+      max: 100,
       suffix: '%',
       higherIsBetter: false,
     },
@@ -676,9 +730,25 @@ export default function Comparison() {
       label: 'Fallos de página',
       leftValue: leftMetrics.faults,
       rightValue: rightMetrics.faults,
-      max: 10,
+      max: faultsMax,
       suffix: '',
       higherIsBetter: false,
+    },
+    {
+      label: 'Cola promedio',
+      leftValue: leftMetrics.avgQueue,
+      rightValue: rightMetrics.avgQueue,
+      max: queueMax,
+      suffix: '',
+      higherIsBetter: false,
+    },
+    {
+      label: 'Completitud',
+      leftValue: leftMetrics.completion,
+      rightValue: rightMetrics.completion,
+      max: 100,
+      suffix: '%',
+      higherIsBetter: true,
     },
   ];
 
@@ -918,6 +988,12 @@ export default function Comparison() {
               Mejor resultado: <span className="text-[#364152]">{betterChoice}</span>
             </div>
           </div>
+
+          {leftSteps.length === 0 && rightSteps.length === 0 && (
+            <p className="mb-4 border-2 border-dashed border-[#111] bg-white px-3 py-2 text-sm font-semibold text-[#4b5563]">
+              Ejecutá la comparación para poblar el gráfico con métricas reales.
+            </p>
+          )}
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
