@@ -941,16 +941,17 @@ export default function Comparison() {
           </p>
 
           <div className="mt-4 flex items-center justify-center">
-            <div className="flex items-center gap-3 text-sm font-bold">
+            <div className="flex w-full max-w-full flex-col items-center gap-1 text-xs font-bold min-[480px]:w-auto min-[480px]:flex-row min-[480px]:gap-3 min-[480px]:text-sm">
               <StepControls
                 onPlay={handlePlayComparison}
                 onPause={pause}
                 onStepForward={stepForward}
                 onStepBackward={stepBackward}
                 onReset={reset}
+                compact
                 isRunning={isRunning}
               />
-              <span>Paso {currentStep + 1} / {maxStep + 1}</span>
+              <span className="text-center">Paso {currentStep + 1} / {maxStep + 1}</span>
             </div>
           </div>
         </section>
