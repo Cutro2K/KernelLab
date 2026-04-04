@@ -48,7 +48,7 @@ export function ProcessQueue({ mode = 'simulation' }: ProcessQueueProps) {
     (p) => !finished.some((f) => f.id === p.id) && !running.some((r) => r.id === p.id),
   ) ?? [];
 
-  const ProcessCard = ({ id, proc , status}: { id: string; proc: Process; status: string }) => (
+  const ProcessCard = ({ proc , status}: {  proc: Process; status: string }) => (
     <div className="border-2 border-gray-800 bg-white p-3 min-w-[120px] flex flex-col gap-2 shadow-[2px_2px_0px_rgba(0,0,0,0.1)]">
       <div className="font-bold text-gray-900">• {proc.name}</div>
       <div className="text-sm">{proc.size}KB</div>
@@ -92,7 +92,7 @@ export function ProcessQueue({ mode = 'simulation' }: ProcessQueueProps) {
       </h3>
       <div className="flex flex-wrap gap-4">
         {list.length > 0 ? (
-          list.map((p) => <ProcessCard key={p.id} id={p.id} proc={p} status={status} />)
+          list.map((p) => <ProcessCard key={p.id} proc={p} status={status} />)
         ) : (
           <span className="text-gray-500 italic text-sm">Vacío</span>
         )}

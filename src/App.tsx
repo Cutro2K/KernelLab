@@ -6,8 +6,6 @@ import Home from './pages/Home.tsx';
 import Simulator from './pages/Simulator';
 import Comparison from './pages/Comparison';
 import About from './pages/About';
-import settingsIcon from "./assets/settings.svg";
-
 function App() {
   return (
     <Router>
