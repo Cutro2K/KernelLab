@@ -12,16 +12,13 @@ function App() {
   return (
     <Router>
       {/* Barra de navegación base (usando un poco de Tailwind) */}
-      <nav className="flex flex-row border-2 mx-2 my-2 p-4 gap-6 shadow-md font-inconsolata">
-        <div className="font-bold max-w-full min-w-fit text-3xl mr-4">&curren; Kernel-Lab</div>
+      <nav className="flex flex-row @container border-2 mx-2 my-2 p-4 gap-6 shadow-md font-inconsolata">
+        <div className="font-bold max-w-full @[1000px]:absolute min-w-fit text-3xl mr-4">&curren; Kernel-Lab</div>
         <div className="w-full text-center">
           <Link to="/" className="hover:font-bold text-xl">[ Inicio ]</Link>
           <Link to="/simulator" className="hover:font-bold text-xl">[ Simulador ]</Link>
           <Link to="/comparison" className="hover:font-bold text-xl">[ Comparar ]</Link>
           <Link to="/about" className="hover:font-bold text-xl">[ Docs ]</Link>
-        </div>
-        <div className="flex min-w-[120px] justify-end gap-2 flex-row text-right max-w-full">
-          <img className="w-[25px]" src={settingsIcon} alt="Settings" />
         </div>
       </nav>
 
