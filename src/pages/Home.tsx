@@ -213,11 +213,14 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="mt-6 overflow-x-auto border-2 border-[#111] bg-[#ececec] p-4">
-        <div ref={sceneRef} className="relative mx-auto flex min-w-215 items-start justify-center gap-24 bg-[#f2f2f2] px-14 py-10">
-          <section className="flex flex-col items-center pt-28">
-            <p className="mb-2 text-center text-3xl text-[#3f3f3f]">Cola de procesos</p>
-            <div ref={queueBoxRef} className="relative h-36 w-52 overflow-hidden border-[3px] border-[#111] bg-[#e9e9e9] p-1">
+      <div className="mt-6 overflow-x-hidden border-2 border-[#111] bg-[#ececec] p-4">
+        <div
+          ref={sceneRef}
+          className="relative mx-auto flex min-w-0 items-start justify-center gap-24 bg-[#f2f2f2] px-14 py-10 max-[640px]:w-140 max-[640px]:origin-top max-[640px]:scale-[0.68] max-[640px]:gap-8 max-[640px]:px-5 max-[640px]:py-5"
+        >
+          <section className="flex flex-col items-center pt-28 max-[640px]:pt-6">
+            <p className="mb-2 text-center text-3xl text-[#3f3f3f] max-[640px]:text-xl">Cola de procesos</p>
+            <div ref={queueBoxRef} className="relative h-36 w-52 overflow-hidden border-[3px] border-[#111] bg-[#e9e9e9] p-1 max-[640px]:h-32 max-[640px]:w-44">
               <AnimatePresence>
                 {queue.map((process, index) => (
                   <motion.div
@@ -242,9 +245,9 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="flex w-80 flex-col items-center">
-            <p className="mb-2 w-full text-center text-3xl text-[#3f3f3f]">Memoria</p>
-            <div ref={memoryGridRef} className="grid h-130 w-44 grid-rows-16 border-[3px] border-[#111] bg-[#ececec] p-1">
+          <section className="flex w-80 flex-col items-center max-[640px]:w-52">
+            <p className="mb-2 w-full text-center text-3xl text-[#3f3f3f] max-[640px]:text-xl">Memoria</p>
+            <div ref={memoryGridRef} className="grid h-130 w-44 grid-rows-16 border-[3px] border-[#111] bg-[#ececec] p-1 max-[640px]:h-112 max-[640px]:w-36">
               {memory.map((block) => (
                 <div key={block.id} className="overflow-visible border border-[#a6a6a6] bg-[#d9d9d9]">
                   {block.processId ? (

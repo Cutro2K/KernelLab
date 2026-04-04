@@ -150,7 +150,7 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
         memoryState: cloneMemoryState(state),
         processQueue: pending.map(p => ({...p})),
         stats: buildStepStats(state, params.totalMemory),
-        description: `Memoria inicializada en árbol. OS particionó ${params.osSize}KB.`
+        description: `Estado: memoria inicializada. Reservado para OS: ${params.osSize ?? 0}KB.`
     });
 
     step = 1;
@@ -194,21 +194,30 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
         }
 
         // 3. Crear el log/descripción del paso
-        let desc = [];
-        if (releasedProcessNames.length > 0) desc.push(`Finalizó: ${releasedProcessNames.join(', ')}. Bloques fusionados.`);
-        if (allocatedProcessNames.length > 0) desc.push(`Asignado: ${allocatedProcessNames.join(', ')}. Bloques divididos.`);
-        if (desc.length === 0) desc.push('Procesos en ejecución...');
-
         const waitingQueue = pending
             .filter((process) => process.arrivalTime <= step)
             .map((process) => ({ ...process }));
+
+        const descriptionParts: string[] = [];
+        if (releasedProcessNames.length > 0) {
+            descriptionParts.push(`Liberados: ${releasedProcessNames.join(', ')}.`);
+        }
+        if (allocatedProcessNames.length > 0) {
+            descriptionParts.push(`Cargados (Buddy System): ${allocatedProcessNames.join(', ')}.`);
+        }
+        if (waitingQueue.length > 0 && allocatedProcessNames.length === 0) {
+            descriptionParts.push(`En espera: ${waitingQueue.map((process) => process.name).join(', ')}.`);
+        }
+        if (descriptionParts.length === 0) {
+            descriptionParts.push('Estado: procesos en ejecucion.');
+        }
 
         steps.push({
             stepNumber: step,
             memoryState: cloneMemoryState(state),
             processQueue: waitingQueue,
             stats: buildStepStats(state, params.totalMemory),
-            description: desc.join(' ')
+            description: descriptionParts.join(' ')
         });
 
         // 4. Chequear Deadlock (terminar simulación si nadie puede entrar y nadie corre)
@@ -221,7 +230,7 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
             });
 
         if (!hasRunningProcesses(state) && !hasFutureArrivals && !hasAnyFitNow && pending.length > 0) {
-            steps[steps.length - 1].description = `¡DEADLOCK! Quedan procesos en cola pero no hay memoria contigua en potencias de 2.`;
+            steps[steps.length - 1].description = 'Bloqueo: quedan procesos en cola y no hay bloques compatibles en potencias de 2.';
             break; 
         }
 
