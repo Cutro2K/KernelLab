@@ -424,7 +424,7 @@ Tabla de segmentos -> (base, limite, permisos)`}
           <section id="state-kernellab" className="border-2 border-[#111] bg-white/85 p-4 shadow-[6px_6px_0_0_rgba(17,17,17,0.15)]">
             <h2 className="mt-0 text-2xl font-bold">+-- Estado en Kernel-Lab</h2>
             <ul className="ml-5 list-disc space-y-1">
-              <li>Implementado en asignacion continua: First Fit, Next Fit, Best Fit, Worst Fit.</li>
+              <li>Implementado en asignacion continua: First Fit, Next Fit, Best Fit, Worst Fit, Buddy System.</li>
               <li>Buddy System aparece en la interfaz teorica, pero el archivo de algoritmo esta vacio actualmente.</li>
               <li>Paginacion y reemplazo: Paginacion Simple, OPT, FIFO, LRU, NRU, Segunda Oportunidad y Clock.</li>
               <li>Segmentacion: division por Code/Data/Heap/Stack con estrategia configurable de ubicacion.</li>
