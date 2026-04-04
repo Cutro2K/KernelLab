@@ -1,4 +1,4 @@
-import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
 
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 520;
@@ -42,6 +42,7 @@ export default function About() {
   const [isResizing, setIsResizing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
   const scrollToSection = (href: string) => {
     const target = document.querySelector(href);
     if (!(target instanceof HTMLElement)) {
@@ -52,7 +53,7 @@ export default function About() {
     window.history.replaceState(null, '', href);
   };
 
-  const handleDocNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleDocNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     event.preventDefault();
     scrollToSection(href);
   };
@@ -84,7 +85,7 @@ export default function About() {
       return;
     }
 
-    const handleMouseMove = (event: globalThis.MouseEvent) => {
+    const handleMouseMove = (event: MouseEvent) => {
       if (!containerRef.current) {
         return;
       }
@@ -143,6 +144,7 @@ export default function About() {
                 <ul className="mt-1 ml-3 border-l-2 border-dashed border-[#111] pl-3">
                   {branch.items.map((item) => (
                     <li key={item.href} className="my-1">
+                      {/* 3. ARREGLO: Agregamos el onClick correcto al <a> */}
                       <a
                         className="inline-block max-w-full wrap-break-word border border-[#111] bg-white px-2 py-1 no-underline transition hover:translate-x-1 hover:bg-[#fff2cf]"
                         href={item.href}

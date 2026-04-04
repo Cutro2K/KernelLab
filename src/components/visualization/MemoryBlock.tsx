@@ -16,22 +16,34 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
   const showCompactLabel = widthPercent >= 4.5;
   const process = block.process;
   const isPagedSegment = Boolean(process?.parentProcessId && process?.pageIndex !== undefined);
+  
   const ownerLabel = block.isFree
     ? 'LIBRE'
     : process?.parentProcessId ?? process?.name ?? 'OS';
+    
   const pageLabel = isPagedSegment
     ? `${process?.segmentType ?? 'Seg'} P${(process?.pageIndex ?? 0) + 1}`
     : `${block.size} KB`;
+    
   const identifier = isPagedSegment
     ? `${ownerLabel}-P${(process?.pageIndex ?? 0) + 1}`
     : ownerLabel;
+    
   const label = ownerLabel;
   const compactLabel = block.isFree
     ? 'L'
     : isPagedSegment
       ? `${ownerLabel}-P${(process?.pageIndex ?? 0) + 1}`
       : label.slice(0, 2).toUpperCase();
+      
   const occupiedColor = block.process?.color ?? '#6b7280';
+
+  // --- CÁLCULO DE FRAGMENTACIÓN INTERNA ---
+  // Restamos el tamaño del proceso al tamaño del bloque.
+  const internalFragmentation = (!block.isFree && block.process)
+    ? Math.max(0, block.size - block.process.size)
+    : 0;
+
   const tooltipContent = (
     <div className="space-y-1">
       <div className="text-[11px] font-black uppercase tracking-wide">{block.isFree ? 'Bloque libre' : 'Bloque ocupado'}</div>
@@ -39,8 +51,16 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
       {isPagedSegment && <div>Tipo: {process?.segmentType ?? 'Seg'}</div>}
       {isPagedSegment && <div>Pagina: {(process?.pageIndex ?? 0) + 1}</div>}
       <div>Tamano: {block.size}KB</div>
+      
+      {/* NUEVO: Mostramos la fragmentación interna solo si está ocupado */}
+      {!block.isFree && (
+        <div className={internalFragmentation > 0 ? "text-yellow-400 font-bold" : ""}>
+          Frag. Interna: {internalFragmentation}KB
+        </div>
+      )}
     </div>
   );
+
   const previousIsFree = useRef(block.isFree);
   const [allocationFade, setAllocationFade] = useState(false);
 
