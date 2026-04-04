@@ -137,7 +137,17 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
             duration: 999999, // SO nunca termina
             color: 'bg-red-400'
         };
-        allocateBuddy(state, osProcess, 0);
+        const osAllocated = allocateBuddy(state, osProcess, 0);
+
+        // Normalizamos la representación del OS para que coincida con el resto de algoritmos:
+        // bloque reservado (ocupado) con process=null y id='os'.
+        if (osAllocated) {
+            const osBlock = state.find((block) => !block.isFree && block.process?.id === 'os');
+            if (osBlock) {
+                osBlock.id = 'os';
+                osBlock.process = null;
+            }
+        }
     }
 
     const pending = [...processes].sort((a, b) => a.arrivalTime - b.arrivalTime);

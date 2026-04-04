@@ -140,7 +140,7 @@ export function AddProcessButton({
       >
         {draft && (
           <form className="border-2 border-[#111] bg-[#f5f5f5] p-4" onSubmit={(event) => event.preventDefault()}>
-            <div className="mb-4 flex items-start justify-between gap-4 border-b-2 border-[#111] pb-3">
+            <div className="mb-4 flex flex-col items-start justify-between gap-3 border-b-2 border-[#111] pb-3 min-[640px]:flex-row min-[640px]:gap-4">
               <div className="w-full">
                 <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#4b5563]">Nombre del proceso</label>
                 <input
@@ -150,7 +150,7 @@ export function AddProcessButton({
                   className="w-full border-2 border-[#111] bg-white px-2 py-1 font-bold"
                 />
               </div>
-              <div className="min-w-40 gap-2 border-2 flex flex-col border-[#111] bg-white px-3 py-2 text-right">
+              <div className="flex w-full min-w-0 gap-2 border-2 border-[#111] bg-white px-3 py-2 text-right min-[640px]:w-auto min-[640px]:min-w-40">
                 {showSizeWarning && (
                   <Tooltip content={`El proceso (${totalSize}KB) supera la memoria util (${availableMemory}KB)`}>
                     <img className="w-10 h-10 self-end" src={warningIcon} alt="Warning" />
@@ -168,7 +168,7 @@ export function AddProcessButton({
                 <SegmentInput label="Stack" value={draft.stackSize} onChange={(value) => updateNumberField('stackSize', value)} />
                 <SegmentInput label="Heap" value={draft.heapSize} onChange={(value) => updateNumberField('heapSize', value)} />
 
-                <label className="flex items-center justify-between gap-3 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+                <label className="flex flex-col items-start justify-between gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
                   <span>Tiempo de llegada</span>
                   <div className="flex items-center gap-2">
                     <input
@@ -176,13 +176,13 @@ export function AddProcessButton({
                       min={0}
                       value={draft.arrivalTime}
                       onChange={(event) => updateNumberField('arrivalTime', Number(event.target.value), 0)}
-                      className="w-24 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right"
+                      className="w-20 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right min-[520px]:w-24"
                     />
                     <span className="text-xs uppercase tracking-wider text-[#4b5563]">Ciclo</span>
                   </div>
                 </label>
 
-                <label className="flex items-center justify-between gap-3 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+                <label className="flex flex-col items-start justify-between gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
                   <span>Duración</span>
                   <div className="flex items-center gap-2">
                     <input
@@ -190,7 +190,7 @@ export function AddProcessButton({
                       min={1}
                       value={draft.duration}
                       onChange={(event) => updateNumberField('duration', Number(event.target.value), 1)}
-                      className="w-24 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right"
+                      className="w-20 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right min-[520px]:w-24"
                     />
                     <span className="text-xs uppercase tracking-wider text-[#4b5563]">Ciclos</span>
                   </div>
@@ -199,7 +199,7 @@ export function AddProcessButton({
 
               <div className="border-2 border-[#111] bg-white p-3">
                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-[#4b5563]">Color del proceso</p>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-4 gap-3 min-[520px]:grid-cols-5">
                   {RETRO_NEUTRAL_COLORS.map((color) => (
                     <button
                       key={color}
@@ -240,7 +240,7 @@ type SegmentInputProps = {
 
 function SegmentInput({ label, value, onChange }: SegmentInputProps) {
   return (
-    <label className="flex items-center justify-between gap-3 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+    <label className="flex flex-col items-start justify-between gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
       <span className="text-base">● {label}</span>
       <div className="flex items-center gap-2">
         <input
@@ -248,7 +248,7 @@ function SegmentInput({ label, value, onChange }: SegmentInputProps) {
           min={0}
           value={value}
           onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
-          className="w-24 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right focus:outline-none"
+          className="w-20 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right focus:outline-none min-[520px]:w-24"
         />
         <span className="text-xs uppercase tracking-wider text-[#4b5563]">KB</span>
       </div>

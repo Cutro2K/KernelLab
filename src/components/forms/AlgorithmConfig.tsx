@@ -93,8 +93,8 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
                 <span>Configuración de algoritmo</span>
             </div>
             
-            <div className="flex items-center gap-3">
-                <label className="font-bold text-sm min-w-[150px]">Tipo de asignacion: </label>
+            <div className="flex flex-col items-start gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-3">
+                <label className="font-bold text-sm min-[640px]:min-w-37.5">Tipo de asignacion: </label>
                 <SelectRetroNativo 
                     value={allocationMode} 
                     options={ALLOCATIONS as string[]} 
@@ -102,8 +102,8 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
                 />
             </div>
 
-            <div className="flex items-center gap-3">
-                <label className="font-bold text-sm min-w-[150px]">Sub algoritmo: </label>
+            <div className="flex flex-col items-start gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-3">
+                <label className="font-bold text-sm min-[640px]:min-w-37.5">Sub algoritmo: </label>
                 <SelectRetroNativo 
                     value={algorithm} 
                     options={allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS as string[] : NON_CONTIGUOUS_ALGORITHMS as string[]} 
@@ -112,8 +112,8 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
             </div>
 
             {allocationMode === 'No contigua' && (
-                <div className="flex items-center gap-3">    
-                    <label className="font-bold text-sm min-w-[150px]">Reemplazo de páginas: </label>
+                <div className="flex flex-col items-start gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-3">    
+                    <label className="font-bold text-sm min-[640px]:min-w-37.5">Reemplazo de páginas: </label>
                     <SelectRetroNativo 
                         value={replacementAlgorithm} 
                         options={algorithm === 'Paginacion Simple' ? PAGE_REPLACEMENT_ALGORITHMS as string[] : CONTIGUOUS_ALGORITHMS as string[]} 
@@ -123,8 +123,8 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
             )}
 
             {showPageSizeSlider && (
-                <div className="flex flex-row items-center gap-4 text-sm">
-                    <label className="font-bold min-w-[150px]">Tamaño de página: </label>
+                <div className="flex flex-col items-start gap-2 text-sm min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-4">
+                    <label className="font-bold min-[640px]:min-w-37.5">Tamaño de página: </label>
                     <input
                         type="range"
                         min="2"
@@ -132,7 +132,7 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
                         step="1"
                         value={pageSizeExponent}
                         onChange={(e) => setPageSizeExponent(Number(e.target.value))}
-                        className="accent-black cursor-pointer"
+                        className="w-full max-w-70 accent-black cursor-pointer"
                     />
                     <span className="font-mono bg-white border border-black px-1">{pageSize}KB</span>
                 </div>
@@ -166,8 +166,8 @@ export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
                 <span>Configuración de memoria</span>
             </div>
             
-            <div className="flex flex-row items-center gap-4 text-sm">
-                <label className="font-bold min-w-[60px]">Memoria: </label>
+            <div className="flex flex-col items-start gap-2 text-sm min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-4">
+                <label className="font-bold min-[640px]:min-w-15">Memoria: </label>
                 <input 
                     type="range" 
                     min="6"    
@@ -175,13 +175,13 @@ export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
                     step="1"   
                     value={exponente}
                     onChange={manejarCambioExponente}
-                    className="accent-black cursor-pointer"
+                    className="w-full max-w-70 accent-black cursor-pointer"
                 />
                 <span className="font-mono bg-white border border-black px-1">{totalMemory}KB</span>
             </div>
 
-            <div className="flex flex-row items-center gap-4 text-sm">
-                <label className="font-bold min-w-[60px]">OS: </label>
+            <div className="flex flex-col items-start gap-2 text-sm min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-4">
+                <label className="font-bold min-[640px]:min-w-15">OS: </label>
                 <input 
                     type="range"
                     min="32" 
@@ -189,7 +189,7 @@ export function MemoryConfig({ className, onConfigSave }: MemoryConfigProps) {
                     step="16"
                     value={osSize}
                     onChange={(e) => setOsSize(parseInt(e.target.value))}
-                    className="accent-black cursor-pointer"
+                    className="w-full max-w-70 accent-black cursor-pointer"
                 />
                 <span className="font-mono bg-white border border-black px-1">{osSize}KB</span>
             </div>

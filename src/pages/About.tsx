@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
 
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 520;
@@ -52,7 +52,7 @@ export default function About() {
     window.history.replaceState(null, '', href);
   };
 
-  const handleDocNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleDocNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
     event.preventDefault();
     scrollToSection(href);
   };
@@ -84,7 +84,7 @@ export default function About() {
       return;
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
       if (!containerRef.current) {
         return;
       }
@@ -124,7 +124,7 @@ export default function About() {
         </p>
       </header>
 
-      <div ref={containerRef} className="relative flex min-h-0 flex-1 max-[900px]:flex-col">
+      <div ref={containerRef} className="relative flex min-h-0 flex-1 max-[900px]:w-full max-[900px]:min-w-0 max-[900px]:flex-col max-[900px]:overflow-x-hidden">
         <nav
           className="flex min-h-0 shrink-0 grow-0 basis-auto flex-col gap-2 overflow-y-auto border-r-2 border-[#111] bg-[#fafafa] p-4 max-[900px]:w-full max-[900px]:border-r-0 max-[900px]:border-b-2"
           aria-label="Indice de documentacion"
@@ -133,7 +133,7 @@ export default function About() {
           <h2 className="mb-1 text-base font-bold">Secciones</h2>
           <p className="mb-1 border border-[#111] bg-[#f4efd8] px-2 py-1 text-xs">root/docs</p>
 
-          <ul className="space-y-3 text-[0.95rem]">
+          <ul className="space-y-3 text-[0.95rem] wrap-break-word">
             {DOC_TREE.map((branch) => (
               <li key={branch.title}>
                 <div className="inline-block border border-[#111] bg-[#e9e9e9] px-2 py-1 text-sm font-bold">
@@ -144,8 +144,9 @@ export default function About() {
                   {branch.items.map((item) => (
                     <li key={item.href} className="my-1">
                       <a
-                        className="inline-block border border-[#111] bg-white px-2 py-1 no-underline transition hover:translate-x-1 hover:bg-[#fff2cf]"
+                        className="inline-block max-w-full wrap-break-word border border-[#111] bg-white px-2 py-1 no-underline transition hover:translate-x-1 hover:bg-[#fff2cf]"
                         href={item.href}
+                        onClick={(event) => handleDocNavClick(event, item.href)}
                       >
                         |-- {item.label}
                       </a>
@@ -169,13 +170,12 @@ export default function About() {
           />
         ) : null}
 
-        <article className="relative grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 max-[900px]:overflow-visible max-[900px]:px-4">
+        <article className="relative grid min-h-0 min-w-0 flex-1 gap-5 overflow-y-auto px-6 py-5 [&>section]:min-w-0 [&>section]:w-full max-[900px]:w-full max-[900px]:overflow-visible max-[900px]:px-4">
           <section id="intro" className="border-2 border-[#111] bg-white/85 p-4 shadow-[6px_6px_0_0_rgba(17,17,17,0.15)]">
-            <h2 className="mt-0 text-2xl font-bold">+-- Introduccion</h2>
+            <h2 className="mt-0 text-xl font-bold min-[640px]:text-2xl">+-- Introduccion</h2>
             <p>
               Kernel-Lab permite explorar visualmente algoritmos de administracion de memoria.
               Puedes ejecutar los pasos uno por uno o animar la simulacion para comparar decisiones
-                        onClick={(event) => handleDocNavClick(event, item.href)}
               del sistema operativo.
             </p>
             <p>

@@ -193,7 +193,7 @@ export default function Simulator() {
 
   return (
     
-    <div className="flex flex-col lg:flex-row gap-5 p-4 font-mono text-black max-w-[1600px] mx-auto">
+    <div className="mx-auto flex max-w-400 flex-col gap-4 p-2 font-mono text-black min-[640px]:gap-5 min-[640px]:p-4 lg:flex-row">
       
       {/* =========================================
           COLUMNA 1: PROCESOS (25% en PC) 
@@ -202,7 +202,7 @@ export default function Simulator() {
         <h1 className="text-lg font-bold pl-2 pb-2">&curren; PROCESOS</h1>
         
         {/* Cambié la altura fija por max-h para que no sea inmenso en celular */}
-        <div className="border-y-2 border-black py-3 max-h-[600px] flex flex-col gap-3 overflow-y-auto">
+        <div className="max-h-150 flex flex-col gap-3 overflow-y-auto border-y-2 border-black py-3">
           <SimProcessList />
         </div>
         
@@ -278,7 +278,7 @@ export default function Simulator() {
         </div>
         <p className="text-center text-xs font-bold uppercase">Paso {currentStep + 1} / {maxStep + 1}</p>
         <div className="w-full px-2">
-          <div className="w-full min-h-[200px] border-2 border-black bg-transparent">
+          <div className="w-full min-h-50 border-2 border-black bg-transparent">
             <p className="p-4 leading-relaxed text-sm">
               {currentSimulationStep?.description
                 ? `¤ ${currentSimulationStep.description}`

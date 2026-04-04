@@ -55,12 +55,18 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
       if (block.isFree || !block.process) {
         continue;
       }
-      seenLoadedProcesses.add(block.process.parentProcessId ?? block.process.id);
+
+      const processId = block.process.parentProcessId ?? block.process.id;
+      if (processId === 'os') {
+        continue;
+      }
+
+      seenLoadedProcesses.add(processId);
     }
   }
 
   const normalizedProcessCount = Math.max(1, totalProcesses);
-  const completion = Math.round((seenLoadedProcesses.size / normalizedProcessCount) * 100);
+  const completion = Math.min(100, Math.round((seenLoadedProcesses.size / normalizedProcessCount) * 100));
 
   const usageComponent = usage * 0.35;
   const externalFragmentationComponent = (100 - externalFragmentation) * 0.2;
@@ -424,12 +430,12 @@ function SimulatorPanel({
           </label>
 
           {showReplacementSelector && (
-            <label className="mt-2 flex items-center gap-2 text-sm font-bold">
+            <label className="mt-2 flex flex-col items-start gap-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center">
               Reemplazo de páginas:
               <select
                 value={replacementAlgorithm}
                 onChange={(event) => onReplacementAlgorithmChange(event.target.value as AlgorithmOption)}
-                className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
+                className="w-full border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold min-[520px]:w-auto"
               >
                 {PAGE_REPLACEMENT_ALGORITHMS.map((option) => (
                   <option key={option} value={option}>
@@ -441,12 +447,12 @@ function SimulatorPanel({
           )}
 
           {showSegmentationSelector && (
-            <label className="mt-2 flex items-center gap-2 text-sm font-bold">
+            <label className="mt-2 flex flex-col items-start gap-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center">
               Estrategia contigua:
               <select
                 value={segmentationStrategy}
                 onChange={(event) => onSegmentationStrategyChange(event.target.value as AlgorithmOption)}
-                className="border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold"
+                className="w-full border-2 rounded-none border-[#111] bg-white px-2 py-1 text-sm font-bold min-[520px]:w-auto"
               >
                 {CONTIGUOUS_ALGORITHMS.map((option) => (
                   <option key={option} value={option}>
@@ -458,8 +464,8 @@ function SimulatorPanel({
           )}
 
           <div className="mt-3 space-y-2 border-t-2 border-[#111] pt-3">
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <span className="min-w-35">Memoria total:</span>
+            <div className="flex flex-col items-start gap-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center">
+              <span className="min-[520px]:min-w-35">Memoria total:</span>
               <input
                 type="range"
                 min={6}
@@ -467,13 +473,13 @@ function SimulatorPanel({
                 step={1}
                 value={memoryExponent}
                 onChange={(event) => onMemoryExponentChange(Number(event.target.value))}
-                className="accent-black"
+                className="w-full accent-black min-[520px]:w-auto"
               />
               <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{memorySize}KB</span>
             </div>
 
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <span className="min-w-35">Tamaño del OS:</span>
+            <div className="flex flex-col items-start gap-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center">
+              <span className="min-[520px]:min-w-35">Tamaño del OS:</span>
               <input
                 type="range"
                 min={32}
@@ -481,14 +487,14 @@ function SimulatorPanel({
                 step={16}
                 value={osSize}
                 onChange={(event) => onOsSizeChange(Number(event.target.value))}
-                className="accent-black"
+                className="w-full accent-black min-[520px]:w-auto"
               />
               <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{osSize}KB</span>
             </div>
 
             {showReplacementSelector && (
-              <div className="flex items-center gap-2 text-sm font-bold">
-                <span className="min-w-35">Tamaño de página:</span>
+              <div className="flex flex-col items-start gap-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center">
+                <span className="min-[520px]:min-w-35">Tamaño de página:</span>
                 <input
                   type="range"
                   min={2}
@@ -496,7 +502,7 @@ function SimulatorPanel({
                   step={1}
                   value={safePageSizeExponent}
                   onChange={(event) => onPageSizeExponentChange(Number(event.target.value))}
-                  className="accent-black"
+                  className="w-full accent-black min-[520px]:w-auto"
                 />
                 <span className="border border-[#111] bg-white px-2 py-1 font-mono text-xs">{pageSize}KB</span>
               </div>
@@ -514,7 +520,7 @@ function SimulatorPanel({
 
         <div className="border-2 border-[#111] bg-white p-3">
           <h4 className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">* Estadísticas intermedias</h4>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-bold">
+          <div className="mt-3 grid grid-cols-1 gap-2 text-sm font-bold min-[520px]:grid-cols-2">
             <div className="border border-[#111] bg-white px-2 py-1">Uso: {stats ? `${stats.memoryUsage}%` : '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Fallos: {stats?.pageFaults ?? '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Frag. ext: {stats ? `${stats.externalFragmentation}%` : '-'}</div>

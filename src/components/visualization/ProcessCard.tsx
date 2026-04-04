@@ -269,11 +269,11 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                             applyProcessEdits();
                         }}
                     >
-                        <div className="mb-4 flex items-start justify-between gap-4 border-b-2 border-[#111] pb-3">
+                        <div className="mb-4 flex flex-col items-start justify-between gap-3 border-b-2 border-[#111] pb-3 min-[640px]:flex-row min-[640px]:gap-4">
                             <div className="text-center items-center justify-center">
                                 <h3 className="mx-auto">{name}</h3>
                             </div>
-                            <div className="min-w-40 gap-5 border-2 flex flex-row border-[#111] bg-white px-3 py-2 text-right">
+                            <div className="flex w-full min-w-0 flex-row gap-5 border-2 border-[#111] bg-white px-3 py-2 text-right min-[640px]:w-auto min-[640px]:min-w-40">
                                 {showSizeWarning && (
                                     <Tooltip content={`El proceso (${totalSize}KB) supera la memoria util (${availableMemory}KB)`}>
                                         <img className="w-10 h-10 my-auto" src={warningIcon} alt="Warning"/>
@@ -293,26 +293,26 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                 <SegmentInput label="Stack" value={segmentStack} onChange={setSegmentStack} />
                                 <SegmentInput label="Heap" value={segmentHeap} onChange={setSegmentHeap} />
                                 <p>OPCIONES PARA ASIGNACION CONTIGUA</p>
-                                <div className="flex text-sm flex-row">
-                                    <label className="w-2/3">Tiempo de llegada</label>
-                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                <div className="flex flex-col gap-1 text-sm min-[520px]:flex-row">
+                                    <label className="min-[520px]:w-2/3">Tiempo de llegada</label>
+                                    <div className="flex flex-row items-center gap-2 min-[520px]:w-1/2 min-[520px]:justify-center">
                                     <input
                                         type="number"
                                         value={arrivalValue}
                                         onChange={handleArrivalTimeChange}
-                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                        className="w-24 border-2 border-[#111] bg-white text-right min-[520px]:w-3/5"
                                     />
                                     <p className="text-xs my-auto mr-2">Ciclo</p>
                                     </div>
                                 </div>
-                                <div className="flex text-sm flex-row">
-                                    <label className="w-2/3">Duración</label>
-                                    <div className="w-1/2 gap-2 flex flex-row justify-center">
+                                <div className="flex flex-col gap-1 text-sm min-[520px]:flex-row">
+                                    <label className="min-[520px]:w-2/3">Duración</label>
+                                    <div className="flex flex-row items-center gap-2 min-[520px]:w-1/2 min-[520px]:justify-center">
                                     <input
                                         type="number"
                                         value={durationValue}
                                         onChange={handleDurationChange}
-                                        className="border-2 border-[#111] bg-white w-3/5 text-right"
+                                        className="w-24 border-2 border-[#111] bg-white text-right min-[520px]:w-3/5"
                                     />
                                     <p className="text-xs my-auto">Ciclos</p>
                                     </div>
@@ -403,7 +403,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                 onClose={() => setIsColorModalOpen(false)}
                 title="Seleccionar color del proceso"
             >
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-4 gap-3 min-[520px]:grid-cols-5">
                     {RETRO_NEUTRAL_COLORS.map((color) => (
                         <button
                             key={color}
@@ -431,7 +431,7 @@ type SegmentInputProps = {
 
 function SegmentInput({ label, value, onChange }: SegmentInputProps) {
     return (
-        <label className="flex items-center justify-between gap-3 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold">
+        <label className="flex flex-col items-start justify-between gap-2 border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
             <span className="text-base">● {label}</span>
             <div className="flex items-center gap-2">
                 <input
@@ -439,7 +439,7 @@ function SegmentInput({ label, value, onChange }: SegmentInputProps) {
                     min={0}
                     value={value}
                     onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
-                    className="w-24 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right focus:outline-none"
+                    className="w-20 border-2 border-[#111] bg-[#fafafa] px-2 py-1 text-right focus:outline-none min-[520px]:w-24"
                 />
                 <span className="text-xs uppercase tracking-wider text-[#4b5563]">KB</span>
             </div>

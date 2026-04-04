@@ -10,7 +10,7 @@ function App() {
     <Router>
       {/* Barra de navegación base (usando un poco de Tailwind) */}
       <nav className="mx-2 my-2 flex flex-col gap-3 border-2 p-4 shadow-md font-inconsolata min-[900px]:relative min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-6">
-        <div className="mr-0 min-w-fit text-center text-2xl font-bold max-[420px]:text-xl min-[900px]:mr-4 min-[900px]:text-3xl">&curren; Kernel-Lab</div>
+        <div className="mr-0 min-w-fit text-center text-2xl font-bold max-[420px]:text-xl min-[900px]:text-3xl min-[1000px]:absolute min-[1000px]:left-4 min-[1000px]:top-1/2 min-[1000px]:-translate-y-1/2">&curren; Kernel-Lab</div>
         <div className="grid w-full grid-cols-2 gap-2 text-center min-[900px]:flex min-[900px]:justify-center min-[900px]:gap-5">
           <Link to="/" className="text-base hover:font-bold min-[900px]:text-xl">[ Inicio ]</Link>
           <Link to="/simulator" className="text-base hover:font-bold min-[900px]:text-xl">[ Simulador ]</Link>

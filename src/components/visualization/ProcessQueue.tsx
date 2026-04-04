@@ -49,7 +49,7 @@ export function ProcessQueue({ mode = 'simulation' }: ProcessQueueProps) {
   ) ?? [];
 
   const ProcessCard = ({ proc , status}: {  proc: Process; status: string }) => (
-    <div className="border-2 border-gray-800 bg-white p-3 min-w-[120px] flex flex-col gap-2 shadow-[2px_2px_0px_rgba(0,0,0,0.1)]">
+    <div className="flex min-w-0 flex-1 flex-col gap-2 border-2 border-gray-800 bg-white p-3 shadow-[2px_2px_0px_rgba(0,0,0,0.1)] min-[520px]:min-w-30">
       <div className="font-bold text-gray-900">• {proc.name}</div>
       <div className="text-sm">{proc.size}KB</div>
       
