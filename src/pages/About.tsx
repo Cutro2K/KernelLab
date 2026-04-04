@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
 
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 520;
@@ -53,7 +53,7 @@ export default function About() {
     window.history.replaceState(null, '', href);
   };
 
-  const handleDocNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleDocNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
     event.preventDefault();
     scrollToSection(href);
   };
@@ -85,7 +85,7 @@ export default function About() {
       return;
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
       if (!containerRef.current) {
         return;
       }

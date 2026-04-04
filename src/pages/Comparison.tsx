@@ -171,6 +171,7 @@ type DisplayBlock = {
   color?: string;
   isFree: boolean;
   isPagedSegment: boolean;
+  internalFragmentation: number;
 };
 
 function AnimatedPreviewBlock({
@@ -194,6 +195,11 @@ function AnimatedPreviewBlock({
       <div>ID: {block.compactLabel}</div>
       <div>Detalle: {block.label}</div>
       <div>Tamano: {block.size}KB</div>
+      {!block.isFree && (
+        <div className={block.internalFragmentation > 0 ? 'font-bold text-yellow-400' : ''}>
+          Frag. Interna: {block.internalFragmentation}KB
+        </div>
+      )}
     </div>
   );
 
@@ -285,6 +291,9 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
           color: block.process?.color ?? '#4b5563',
           isFree: block.isFree,
           isPagedSegment: Boolean(block.process?.parentProcessId && block.process.pageIndex !== undefined),
+          internalFragmentation: !block.isFree && block.process
+            ? Math.max(0, block.size - block.process.size)
+            : 0,
         }))
       : [
           {
@@ -295,6 +304,7 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
             size: normalizedTotalMemory,
             isFree: true,
             isPagedSegment: false,
+            internalFragmentation: 0,
           },
         ];
 
@@ -308,6 +318,7 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
       size: normalizedTotalMemory - usedSize,
       isFree: true,
       isPagedSegment: false,
+      internalFragmentation: 0,
     });
   }
 
