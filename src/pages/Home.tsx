@@ -242,8 +242,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="w-80">
-            <p className="mb-2 text-center text-3xl text-[#3f3f3f]">Memoria</p>
+          <section className="flex w-80 flex-col items-center">
+            <p className="mb-2 w-full text-center text-3xl text-[#3f3f3f]">Memoria</p>
             <div ref={memoryGridRef} className="grid h-130 w-44 grid-rows-16 border-[3px] border-[#111] bg-[#ececec] p-1">
               {memory.map((block) => (
                 <div key={block.id} className="overflow-visible border border-[#a6a6a6] bg-[#d9d9d9]">
