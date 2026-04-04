@@ -1,5 +1,4 @@
-// src/App.tsx
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
 // Importamos las páginas que creamos
 import Home from './pages/Home.tsx';
