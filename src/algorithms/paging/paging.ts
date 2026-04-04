@@ -175,6 +175,10 @@ export function pagingSimulation(
 	let step = 0;
 
 	while (pending.length > 0) {
+		const loadedPageNames: string[] = [];
+		const replacedPageNames: string[] = [];
+		const waitingPageNames: string[] = [];
+
 		for (let index = 0; index < pending.length; ) {
 			const pageRequest = pending[index];
 			if (pageRequest.arrivalTime > step) {
@@ -187,6 +191,10 @@ export function pagingSimulation(
 				const { victimIndex, nextClockPointer } = selectVictimFrame(state, frameMeta, pending.slice(index + 1), algorithm, clockPointer);
 				clockPointer = nextClockPointer;
 				if (victimIndex !== -1) {
+					const replacedPage = state[victimIndex].process;
+					if (replacedPage) {
+						replacedPageNames.push(replacedPage.name);
+					}
 					frameMeta.delete(state[victimIndex].id);
 					state[victimIndex].isFree = true;
 					state[victimIndex].process = null;
@@ -195,12 +203,14 @@ export function pagingSimulation(
 			}
 
 			if (freeFrameIndex === -1) {
+				waitingPageNames.push(`${pageRequest.parentProcessName}-${pageRequest.segmentType} P${pageRequest.pageIndex + 1}`);
 				index += 1;
 				continue;
 			}
 
 			state[freeFrameIndex].isFree = false;
 			state[freeFrameIndex].process = toPageProcess(pageRequest, step, pageSize);
+			loadedPageNames.push(`${pageRequest.parentProcessName}-${pageRequest.segmentType} P${pageRequest.pageIndex + 1}`);
 			frameMeta.set(state[freeFrameIndex].id, { loadedAt: step, lastUsed: step, referenceBit: 1, modifiedBit: 0 });
 
 			pending.splice(index, 1);
@@ -214,11 +224,26 @@ export function pagingSimulation(
 			).values(),
 		).map((process) => ({ ...process }));
 
+		const descriptionParts: string[] = [];
+		if (loadedPageNames.length > 0) {
+			descriptionParts.push(`Cargadas: ${loadedPageNames.join(', ')}.`);
+		}
+		if (replacedPageNames.length > 0) {
+			descriptionParts.push(`Reemplazo (${algorithm}): ${replacedPageNames.join(', ')}.`);
+		}
+		if (waitingPageNames.length > 0) {
+			descriptionParts.push(`En espera: ${waitingPageNames.join(', ')}.`);
+		}
+		if (descriptionParts.length === 0) {
+			descriptionParts.push('Estado: paginacion en ejecucion.');
+		}
+
 		steps.push({
 			stepNumber: step,
 			memoryState: cloneMemoryState(state),
 			processQueue: waitingProcesses,
 			stats: buildStepStats(state, config.totalMemory),
+			description: descriptionParts.join(' '),
 		});
 
 		const hasFutureArrivals = pending.some((process) => process.arrivalTime > step);
@@ -226,6 +251,7 @@ export function pagingSimulation(
 		const hasFreeFrame = state.some((block) => block.isFree && block.id.startsWith('frame-') && block.size === pageSize);
 
 		if (algorithm === 'Paginacion Simple' && hasArrivedPending && !hasFreeFrame && !hasFutureArrivals) {
+			steps[steps.length - 1].description = 'Bloqueo: sin reemplazo de paginas y sin marcos libres para las paginas pendientes.';
 			break;
 		}
 

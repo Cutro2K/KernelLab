@@ -36,9 +36,12 @@ export function worstFitCon(processes: Process[], memoryState: MemoryBlock[], _p
 
 	while (pending.length > 0 || hasRunningProcesses(state)) {
 		let didRelease = false;
+		const releasedProcessNames: string[] = [];
+		let allocatedProcessName: string | null = null;
 
 		for (const block of state) {
 			if (!block.isFree && block.process && step >= block.process.arrivalTime + block.process.duration) {
+				releasedProcessNames.push(block.process.name);
 				block.isFree = true;
 				block.process = null;
 				didRelease = true;
@@ -86,6 +89,7 @@ export function worstFitCon(processes: Process[], memoryState: MemoryBlock[], _p
 					...selectedProcess,
 					arrivalTime: step,
 				};
+				allocatedProcessName = selectedProcess.name;
 
 				targetBlock.isFree = false;
 				targetBlock.process = allocatedProcess;
@@ -113,11 +117,26 @@ export function worstFitCon(processes: Process[], memoryState: MemoryBlock[], _p
 			.filter((process) => process.arrivalTime <= step)
 			.map((process) => ({ ...process }));
 
+		const descriptionParts: string[] = [];
+		if (releasedProcessNames.length > 0) {
+			descriptionParts.push(`Liberados: ${releasedProcessNames.join(', ')}.`);
+		}
+		if (allocatedProcessName) {
+			descriptionParts.push(`Asignacion (Worst Fit): ${allocatedProcessName} en el bloque libre mas grande.`);
+		}
+		if (!allocatedProcessName && waitingQueue.length > 0) {
+			descriptionParts.push(`En espera: ${waitingQueue.map((process) => process.name).join(', ')}.`);
+		}
+		if (descriptionParts.length === 0) {
+			descriptionParts.push('Estado: procesos en ejecucion.');
+		}
+
 		steps.push({
 			stepNumber: step,
 			memoryState: cloneMemoryState(state),
 			processQueue: waitingQueue,
 			stats: buildStepStats(state, _params.totalMemory),
+			description: descriptionParts.join(' '),
 		});
 
 		const hasFutureArrivals = pending.some((process) => process.arrivalTime > step);
@@ -126,6 +145,7 @@ export function worstFitCon(processes: Process[], memoryState: MemoryBlock[], _p
 			.some((process) => state.some((block) => block.isFree && block.size >= process.size));
 
 		if (!hasRunningProcesses(state) && !hasFutureArrivals && !hasAnyFitNow && pending.length > 0) {
+			steps[steps.length - 1].description = 'Bloqueo: quedan procesos en cola y no hay bloque contiguo suficiente.';
 			break;
 		}
 

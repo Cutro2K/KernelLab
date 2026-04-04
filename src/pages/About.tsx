@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
 
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 520;
@@ -42,6 +42,30 @@ export default function About() {
   const [isResizing, setIsResizing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const scrollToSection = (href: string) => {
+    const target = document.querySelector(href);
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.history.replaceState(null, '', href);
+  };
+
+  const handleDocNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    event.preventDefault();
+    scrollToSection(href);
+  };
+
+  useEffect(() => {
+    if (!window.location.hash) {
+      return;
+    }
+
+    const hash = window.location.hash;
+    const timer = window.setTimeout(() => scrollToSection(hash), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 900px)');
@@ -89,7 +113,7 @@ export default function About() {
 
   return (
     <section
-      className="relative flex h-[calc(100vh-140px)] flex-col overflow-hidden border-2 border-[#111] bg-linear-to-br from-[#f9f7f1] via-[#f3f6fb] to-[#ece6df]"
+      className="relative flex min-h-[calc(100vh-140px)] flex-col overflow-hidden border-2 border-[#111] bg-linear-to-br from-[#f9f7f1] via-[#f3f6fb] to-[#ece6df] max-[900px]:min-h-0 max-[900px]:overflow-visible"
       aria-label="Documentacion de Kernel-Lab"
     >
       <header className="border-b-2 border-[#111] bg-slate-200 px-4 py-5">
@@ -145,12 +169,13 @@ export default function About() {
           />
         ) : null}
 
-        <article className="relative grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 max-[900px]:px-4">
+        <article className="relative grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 max-[900px]:overflow-visible max-[900px]:px-4">
           <section id="intro" className="border-2 border-[#111] bg-white/85 p-4 shadow-[6px_6px_0_0_rgba(17,17,17,0.15)]">
             <h2 className="mt-0 text-2xl font-bold">+-- Introduccion</h2>
             <p>
               Kernel-Lab permite explorar visualmente algoritmos de administracion de memoria.
               Puedes ejecutar los pasos uno por uno o animar la simulacion para comparar decisiones
+                        onClick={(event) => handleDocNavClick(event, item.href)}
               del sistema operativo.
             </p>
             <p>

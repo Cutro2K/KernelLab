@@ -148,6 +148,10 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 	let step = 0;
 
 	while (true) {
+		const releasedProcessNames: string[] = [];
+		const loadedSegmentNames: string[] = [];
+		const startedProcessNames: string[] = [];
+
 		let didRelease = false;
 		for (const runtime of processRuntime.values()) {
 			if (runtime.completed || runtime.startedAt === null) {
@@ -172,6 +176,7 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 
 			runtime.completed = true;
 			runtime.startedAt = null;
+			releasedProcessNames.push(runtime.process.name);
 		}
 
 		if (didRelease) {
@@ -205,6 +210,7 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 			const targetBlock = state[freeBlockIndex];
 			targetBlock.isFree = false;
 			targetBlock.process = toProcess(segment, step);
+			loadedSegmentNames.push(`${segment.parentProcessName}-${segment.segmentType}`);
 
 			if (targetBlock.size > segment.size) {
 				const remainingSize = targetBlock.size - segment.size;
@@ -239,6 +245,7 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 
 			if (runtime.loadedSegments === runtime.totalSegments) {
 				runtime.startedAt = step;
+				startedProcessNames.push(runtime.process.name);
 			}
 		}
 
@@ -246,11 +253,29 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 			.filter((runtime) => !runtime.completed && runtime.startedAt === null && step >= runtime.process.arrivalTime)
 			.map((runtime) => ({ ...runtime.process }));
 
+		const descriptionParts: string[] = [];
+		if (releasedProcessNames.length > 0) {
+			descriptionParts.push(`Liberados: ${releasedProcessNames.join(', ')}.`);
+		}
+		if (loadedSegmentNames.length > 0) {
+			descriptionParts.push(`Cargados (${strategy}): ${loadedSegmentNames.join(', ')}.`);
+		}
+		if (startedProcessNames.length > 0) {
+			descriptionParts.push(`En ejecucion: ${startedProcessNames.join(', ')}.`);
+		}
+		if (waitingParents.length > 0 && loadedSegmentNames.length === 0) {
+			descriptionParts.push(`En espera: ${waitingParents.map((process) => process.name).join(', ')}.`);
+		}
+		if (descriptionParts.length === 0) {
+			descriptionParts.push('Estado: segmentacion en ejecucion.');
+		}
+
 		steps.push({
 			stepNumber: step,
 			memoryState: cloneMemoryState(state),
 			processQueue: waitingParents,
 			stats: buildStepStats(state, config.totalMemory),
+			description: descriptionParts.join(' '),
 		});
 
 		const hasFutureArrivals = Array.from(processRuntime.values()).some(
@@ -259,6 +284,15 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 		const hasRunningProcesses = Array.from(processRuntime.values()).some(
 			(runtime) => !runtime.completed && runtime.startedAt !== null,
 		);
+		const hasArrivedPendingSegments = pending.some((segment) => segment.arrivalTime <= step);
+		const hasAnyFitNow = pending
+			.filter((segment) => segment.arrivalTime <= step)
+			.some((segment) => selectFreeBlockIndex(state, segment.size, strategy, nextFitStartIndex) !== -1);
+
+		if (!hasRunningProcesses && !hasFutureArrivals && hasArrivedPendingSegments && !hasAnyFitNow) {
+			steps[steps.length - 1].description = 'Bloqueo: quedan segmentos en cola y no hay huecos contiguos para ubicarlos.';
+			break;
+		}
 
 		if (!hasRunningProcesses && !hasFutureArrivals && isOnlyOsOccupied(state)) {
 			break;
