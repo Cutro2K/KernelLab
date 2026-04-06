@@ -40,8 +40,8 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
 
   // --- CÁLCULO DE FRAGMENTACIÓN INTERNA ---
   // Restamos el tamaño del proceso al tamaño del bloque.
-  const internalFragmentation = (!block.isFree && block.process)
-    ? Math.max(0, block.size - block.process.size)
+  const internalFragmentation = !block.isFree
+    ? Math.max(0, block.size - (block.usedSize ?? block.process?.size ?? block.size))
     : 0;
 
   const tooltipContent = (

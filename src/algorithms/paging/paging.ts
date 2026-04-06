@@ -76,16 +76,27 @@ function toSegmentPages(segments: SegmentUnit[], pageSize: number): SegmentPageR
 
 function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): MemoryBlock[] {
 	const osBlock = initialState.find((block) => !block.isFree && block.process === null);
-	const freeSize = initialState.filter((block) => block.isFree).reduce((sum, block) => sum + block.size, 0);
+	const totalSize = initialState.reduce((sum, block) => sum + block.size, 0);
+	const osUsedSize = Math.max(0, osBlock?.usedSize ?? osBlock?.size ?? 0);
+	const alignedOsSize = osUsedSize > 0 ? Math.ceil(osUsedSize / pageSize) * pageSize : 0;
+	const osReservedSize = Math.min(totalSize, alignedOsSize);
+	const freeSize = Math.max(0, totalSize - osReservedSize);
 	const frameCount = Math.floor(freeSize / pageSize);
 	const remainder = freeSize - frameCount * pageSize;
 
 	const state: MemoryBlock[] = [];
-	if (osBlock) {
-		state.push({ ...osBlock, process: null, isFree: false });
+	if (osReservedSize > 0) {
+		state.push({
+			id: 'os',
+			start: 0,
+			size: osReservedSize,
+			usedSize: osUsedSize,
+			process: null,
+			isFree: false,
+		});
 	}
 
-	const frameStart = osBlock ? osBlock.start + osBlock.size : 0;
+	const frameStart = osReservedSize;
 	for (let index = 0; index < frameCount; index += 1) {
 		state.push({
 			id: `frame-${index}`,

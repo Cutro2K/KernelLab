@@ -291,8 +291,8 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
           color: block.process?.color ?? '#4b5563',
           isFree: block.isFree,
           isPagedSegment: Boolean(block.process?.parentProcessId && block.process.pageIndex !== undefined),
-          internalFragmentation: !block.isFree && block.process
-            ? Math.max(0, block.size - block.process.size)
+          internalFragmentation: !block.isFree
+            ? Math.max(0, block.size - (block.usedSize ?? block.process?.size ?? block.size))
             : 0,
         }))
       : [

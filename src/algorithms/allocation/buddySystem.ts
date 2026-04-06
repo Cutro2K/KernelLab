@@ -145,6 +145,7 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
             const osBlock = state.find((block) => !block.isFree && block.process?.id === 'os');
             if (osBlock) {
                 osBlock.id = 'os';
+                osBlock.usedSize = params.osSize;
                 osBlock.process = null;
             }
         }

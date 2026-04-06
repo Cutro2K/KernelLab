@@ -20,6 +20,7 @@ function createInitialMemoryState(totalMemory: number, osSize: number): MemoryBl
       id: 'os',
       start: 0,
       size: normalizedOs,
+      usedSize: normalizedOs,
       process: null,
       isFree: false,
     });

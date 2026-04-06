@@ -58,6 +58,7 @@ export interface MemoryBlock {
   id: string;
   start: number;
   size: number; // En Contiguo/Buddy/Segmentado varía. En Paginado siempre es igual al pageSize.
+  usedSize?: number; // Bytes realmente usados dentro del bloque (permite modelar frag. interna del OS).
   process: Process | null;
   isFree: boolean;
 }

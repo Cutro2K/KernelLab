@@ -9,11 +9,19 @@ export function buildStepStats(memoryState: MemoryBlock[], totalMemory: number):
   const isPagingLayout = memoryState.some((block) => block.id.startsWith('frame-'));
   const effectiveExternalFragmentation = isPagingLayout ? 0 : fragmentedFree;
   const internalWaste = memoryState.reduce((sum, block) => {
-    if (block.isFree || !block.process) {
+    if (block.isFree) {
       return sum;
     }
 
-    const usedInBlock = Math.max(0, Math.min(block.size, block.process.size));
+    const explicitUsedSize = block.usedSize;
+    const processUsedSize = block.process?.size;
+    const usedInBlock = Math.max(
+      0,
+      Math.min(
+        block.size,
+        explicitUsedSize ?? processUsedSize ?? block.size,
+      ),
+    );
     return sum + (block.size - usedInBlock);
   }, 0);
   const normalizedTotalMemory = Math.max(1, totalMemory);
