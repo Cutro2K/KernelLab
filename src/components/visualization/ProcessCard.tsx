@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Chrome, type ColorResult } from "@uiw/react-color";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { Tooltip } from "../ui/Tooltip";
@@ -17,7 +18,6 @@ export const RETRO_NEUTRAL_COLORS = [
     "#166534", // moss green
     "#1D4ED8", // muted blue
 ];
-    // Aquí deberías llamar a tu función de eliminación del proceso en el estado global
 
 export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, stackArrivalTime, dataArrivalTime, heapArrivalTime, codeArrivalTime, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, stackArrivalTime?: number, dataArrivalTime?: number, heapArrivalTime?: number, codeArrivalTime?: number, onDelete?: (id: string) => void}) {
     const removeComparisonProcess = useComparisonStore((state) => state.removeProcess);
@@ -75,7 +75,6 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
 
     const handleSelectColor = (color: string) => {
         setProcessColor(color);
-        setIsColorModalOpen(false);
     };
 
     const resetDraftFromProps = () => {
@@ -403,20 +402,13 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                 onClose={() => setIsColorModalOpen(false)}
                 title="Seleccionar color del proceso"
             >
-                <div className="grid grid-cols-4 gap-3 min-[520px]:grid-cols-5">
-                    {RETRO_NEUTRAL_COLORS.map((color) => (
-                        <button
-                            key={color}
-                            type="button"
-                            onClick={() => handleSelectColor(color)}
-                            className={`h-10 w-10 border-2 border-[#111] shadow-[2px_2px_0_rgba(0,0,0,0.2)] ${
-                                processColor === color ? "ring-2 ring-[#111] ring-offset-2" : ""
-                            }`}
-                            style={{ backgroundColor: color }}
-                            aria-label={`Seleccionar ${color}`}
-                            title={color}
-                        />
-                    ))}
+                <div className="flex flex-col items-center gap-3">
+                    <Chrome
+                        color={processColor}
+                        showAlpha={false}
+                        onChange={(nextColor: ColorResult) => handleSelectColor(nextColor.hex)}
+                    />
+                    <p className="text-sm font-bold uppercase tracking-wide">Color actual: {processColor}</p>
                 </div>
             </Modal>
         </>

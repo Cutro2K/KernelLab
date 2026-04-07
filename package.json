@@ -12,6 +12,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@uiw/react-color": "^2.10.0",
     "d3": "^7.9.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.4",
