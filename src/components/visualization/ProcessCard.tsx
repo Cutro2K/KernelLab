@@ -20,6 +20,8 @@ export const RETRO_NEUTRAL_COLORS = [
 ];
 
 export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, heapSize, arrivalTime, duration, stackArrivalTime, dataArrivalTime, heapArrivalTime, codeArrivalTime, onDelete}: {id?: string, name?: string, color?: string, codeSize?: number, stackSize?: number, dataSize?: number, heapSize?: number, arrivalTime?: number, duration?: number, stackArrivalTime?: number, dataArrivalTime?: number, heapArrivalTime?: number, codeArrivalTime?: number, onDelete?: (id: string) => void}) {
+    
+    {/* Extraccion de datos de estado global de Comparador/Simulador (Zustand) */}
     const removeComparisonProcess = useComparisonStore((state) => state.removeProcess);
     const simulationConfig = useSimulationStore((state) => state.configParams);
     const comparisonConfig1 = useComparisonStore((state) => state.configParams1);
@@ -192,10 +194,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
         setEditIsOpen(false);
     };
 
-    const committedUtilization = availableMemory && availableMemory > 0
-        ? Math.round((committedTotalSize / availableMemory) * 100)
-        : null;
-
+    {/* Contenido del Tooltop (Datos del proceso) */}
     const tooltipContent = (
         <div className="text-xs space-y-1">
             <div className="text-lg">ID: {id}</div>
@@ -203,24 +202,20 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
             <div className="text-lg">Datos: {dataSize ?? 0}KB</div>
             <div className="text-lg">Stack: {stackSize ?? 0}KB</div>
             <div className="text-lg">Heap: {heapSize ?? 0}KB</div>
-            {availableMemory !== null && (
-                <div className="text-lg">Memoria útil: {availableMemory}KB</div>
-            )}
-            {committedUtilization !== null && (
-                <div className="text-lg">Uso sobre memoria útil: {committedUtilization}%</div>
-            )}
         </div>
     );
 
     return (
         <>
+            {/* Tooltip que aparece sobre el cursor y muestra informacion del proceso al hacerle hover a la tarjeta */}
+            {/* Para informacion del componente Tooltop ir a ../ui/Tooltip.tsx */}
             <Tooltip content={tooltipContent}>
                 <div className="border-2 border-[#111] bg-[#ececec] h-fit p-4 cursor-help">
                     <div>
                         <h4 className="text-lg font-bold mb-2">{name}</h4>
-                        <p>Tamano: {committedTotalSize}KB</p>
+                        <p>Tamaño: {committedTotalSize}KB</p>
                         <p>Llegada: {arrivalTime ?? 0} t</p>
-                        <p>Duracion: {duration ?? 0} ciclos</p>
+                        <p>Duración: {duration ?? 0} ciclos</p>
                         <div className="flex items-center gap-2">
                             <p>Color:</p>
                             <button
@@ -247,6 +242,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                     </div>
                 </div>
             </Tooltip>
+            {/* Popup de edicion de proceso */}
             {editIsOpen && (
                 <Modal
                     isOpen={editIsOpen}
@@ -287,6 +283,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-3">
+                                {/* Campos de datos para el proceso, editables */}
                                 <SegmentInput label="Código" value={segmentCode} onChange={setSegmentCode} />
                                 <SegmentInput label="Datos" value={segmentData} onChange={setSegmentData} />
                                 <SegmentInput label="Stack" value={segmentStack} onChange={setSegmentStack} />
@@ -368,7 +365,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                                 </div>
                             </div>
                             
-
+                            {/* Componente que muestra los distintos segmentos del proceso con tamaños */}
                             <div className="border-2 border-[#111] bg-white p-3">
                                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-[#4b5563]">Mapa de segmentos</p>
                                 <div className="h-110 border-2 border-[#111] bg-[#f8f8f8]" style={{ height: `${mapHeightRem}rem` }}>
@@ -396,7 +393,7 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
                     </form>
                 </Modal>
             )}
-
+            {/* Selector de color de procesos para representacion en MemoryMap */}
             <Modal
                 isOpen={isColorModalOpen}
                 onClose={() => setIsColorModalOpen(false)}

@@ -23,11 +23,25 @@ type AlgorithmMetrics = {
   usage: number;
   externalFragmentation: number;
   internalFragmentation: number;
+  osInternalFragmentation: number;
   faults: number;
   avgQueue: number;
   completion: number;
   score: number;
 };
+
+function computeOsInternalFragmentationPercent(memoryState: MemoryBlock[]): number {
+  const normalizedTotal = Math.max(1, memoryState.reduce((sum, block) => sum + block.size, 0));
+  const osBlock = memoryState.find((block) => !block.isFree && block.id === 'os');
+
+  if (!osBlock) {
+    return 0;
+  }
+
+  const osUsed = Math.max(0, Math.min(osBlock.size, osBlock.usedSize ?? osBlock.process?.size ?? osBlock.size));
+  const osWaste = Math.max(0, osBlock.size - osUsed);
+  return Math.round((osWaste / normalizedTotal) * 100);
+}
 
 function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number): AlgorithmMetrics {
   if (steps.length === 0) {
@@ -35,6 +49,7 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
       usage: 0,
       externalFragmentation: 0,
       internalFragmentation: 0,
+      osInternalFragmentation: 0,
       faults: 0,
       avgQueue: 0,
       completion: 0,
@@ -46,6 +61,9 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
   const usage = Math.round(stats.reduce((sum, item) => sum + item.memoryUsage, 0) / stats.length);
   const externalFragmentation = Math.round(stats.reduce((sum, item) => sum + item.externalFragmentation, 0) / stats.length);
   const internalFragmentation = Math.round(stats.reduce((sum, item) => sum + item.internalFragmentation, 0) / stats.length);
+  const osInternalFragmentation = Math.round(
+    steps.reduce((sum, step) => sum + computeOsInternalFragmentationPercent(step.memoryState), 0) / steps.length,
+  );
   const faults = stats.reduce((sum, item) => sum + item.pageFaults, 0);
   const avgQueue = Math.round(steps.reduce((sum, step) => sum + step.processQueue.length, 0) / steps.length);
 
@@ -89,7 +107,7 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
     ),
   );
 
-  return { usage, externalFragmentation, internalFragmentation, faults, avgQueue, completion, score };
+  return { usage, externalFragmentation, internalFragmentation, osInternalFragmentation, faults, avgQueue, completion, score };
 }
 
 
@@ -403,6 +421,7 @@ function SimulatorPanel({
   const maxPageSizeExponent = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(memorySize / 2)))));
   const safePageSizeExponent = Math.min(pageSizeExponent, maxPageSizeExponent);
   const pageSize = 2 ** safePageSizeExponent;
+  const osInternalFragmentation = memoryState ? computeOsInternalFragmentationPercent(memoryState) : 0;
 
   return (
     <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.1)]">
@@ -536,6 +555,7 @@ function SimulatorPanel({
             <div className="border border-[#111] bg-white px-2 py-1">Fallos: {stats?.pageFaults ?? '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Frag. ext: {stats ? `${stats.externalFragmentation}%` : '-'}</div>
             <div className="border border-[#111] bg-white px-2 py-1">Frag. int: {stats ? `${stats.internalFragmentation}%` : '-'}</div>
+            <div className="border border-[#111] bg-white px-2 py-1 min-[520px]:col-span-2">Frag. int OS: {stats ? `${osInternalFragmentation}%` : '-'}</div>
             <div className="col-span-2 flex w-full">
               <div className="flex-1 border border-[#111] bg-white px-2 py-1">
                 <div>Procesos en espera: {processQueue.length}</div>
@@ -806,6 +826,14 @@ export default function Comparison() {
       higherIsBetter: false,
     },
     {
+      label: 'Fragmentación int. OS',
+      leftValue: leftMetrics.osInternalFragmentation,
+      rightValue: rightMetrics.osInternalFragmentation,
+      max: 100,
+      suffix: '%',
+      higherIsBetter: false,
+    },
+    {
       label: 'Fallos de página',
       leftValue: leftMetrics.faults,
       rightValue: rightMetrics.faults,
@@ -830,7 +858,7 @@ export default function Comparison() {
       higherIsBetter: true,
     },
   ];
-
+  // Generador de lista aleatoria de procesos, no reemplaza procesos existentes
   const handleAddRandomProcesses = () => {
     const totalToAdd = Math.floor(Math.random() * 5) + 3;
 
@@ -866,12 +894,15 @@ export default function Comparison() {
     }
   };
 
+  // Funcion que se ejecuta el presionar INICIAR
+  // Se encarga de calcular cada paso y hacer las comparaciones
+
   const handleStartComparison = () => {
     const leftTotalMemory = 2 ** leftMemoryExponent;
     const rightTotalMemory = 2 ** rightMemoryExponent;
     const leftPageSize = 2 ** Math.min(leftPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(leftTotalMemory / 2))))));
     const rightPageSize = 2 ** Math.min(rightPageSizeExponent, Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(rightTotalMemory / 2))))));
-
+    // Configuracion izquierda
     const leftConfig: SimulationConfig = {
       algorithm: leftSimulationAlgorithm,
       totalMemory: leftTotalMemory,
@@ -880,7 +911,7 @@ export default function Comparison() {
       pageSize: leftSubAlgorithm === 'Paginacion Simple' ? leftPageSize : undefined,
       segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
     };
-
+    // Configuracion derecha
     const rightConfig: SimulationConfig = {
       algorithm: rightSimulationAlgorithm,
       totalMemory: rightTotalMemory,
@@ -889,13 +920,14 @@ export default function Comparison() {
       pageSize: rightSubAlgorithm === 'Paginacion Simple' ? rightPageSize : undefined,
       segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
     };
-
+    // Vectores de Steps: SimulationStep[]
     const generatedLeftSteps = runAllocationSimulation(leftSimulationAlgorithm, processes, leftConfig);
     const generatedRightSteps = runAllocationSimulation(rightSimulationAlgorithm, processes, rightConfig);
 
     setLeftSteps(generatedLeftSteps);
     setRightSteps(generatedRightSteps);
 
+    // Setea estado global de Comparador (Zustand)
     useComparisonStore.setState((prevState) => ({
       ...prevState,
       allocationStrategy: allocationMode,
@@ -905,8 +937,6 @@ export default function Comparison() {
       configParams1: leftConfig,
       configParams2: rightConfig,
     }));
-
-    console.log('Comparison store snapshot:', useComparisonStore.getState());
 
     reset();
     pause();
@@ -959,6 +989,7 @@ export default function Comparison() {
 
           <div className="mt-4 flex items-center justify-center">
             <div className="flex w-full max-w-full flex-col items-center gap-1 text-xs font-bold min-[480px]:w-auto min-[480px]:flex-row min-[480px]:gap-3 min-[480px]:text-sm">
+              { /* Ver visualization/StepControl.tsx para información */ }
               <StepControls
                 onPlay={handlePlayComparison}
                 onPause={pause}
@@ -1089,6 +1120,7 @@ export default function Comparison() {
             <div className="border-2 border-[#111] bg-white px-3 py-2 text-sm font-bold shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
               Mejor resultado: <span className="text-[#364152]">{betterChoice}</span>
             </div>
+            
           </div>
 
           {leftSteps.length === 0 && rightSteps.length === 0 && (
