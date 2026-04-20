@@ -22,3 +22,10 @@ export function calculateStats(memoryState: MemoryBlock[], totalMemory: number) 
     freeMemory: totalMemory - occupiedMemory
   };
 }
+
+export function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
+	return state.map((block) => ({
+		...block,
+		process: block.process ? { ...block.process } : null,
+	}));
+}

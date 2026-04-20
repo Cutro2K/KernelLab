@@ -1,6 +1,7 @@
 import { buildStepStats } from '../stepStats';
 import { buildSegmentsFromProcesses, type SegmentUnit } from '../nonContiguous/segments';
 import { type MemoryBlock, type Process, type SimulationConfig, type SimulationStep } from '../types';
+import { cloneMemoryState } from '../../utils/helpers';
 
 type SegmentStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
 type ProcessRuntime = {
@@ -10,13 +11,6 @@ type ProcessRuntime = {
 	startedAt: number | null;
 	completed: boolean;
 };
-
-function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
-	return state.map((block) => ({
-		...block,
-		process: block.process ? { ...block.process } : null,
-	}));
-}
 
 function toProcess(segment: SegmentUnit, step: number): Process {
 	return {

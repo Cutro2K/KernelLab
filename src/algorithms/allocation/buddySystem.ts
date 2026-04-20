@@ -1,12 +1,6 @@
 import { type Process, type SimulationStep, type SimulationConfig, type MemoryBlock } from '../types';
 import { buildStepStats } from '../stepStats';
-
-function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
-    return state.map((block) => ({
-        ...block,
-        process: block.process ? { ...block.process } : null,
-    }));
-}
+import { cloneMemoryState } from '../../utils/helpers';
 
 // Matemática: Encuentra la siguiente potencia de 2 (Ej: 60KB -> 64KB, 120KB -> 128KB)
 function nextPowerOf2(size: number): number {

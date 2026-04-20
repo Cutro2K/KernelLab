@@ -101,7 +101,7 @@ export interface SimulationConfig {
     processes: Process[];
     frames?: number; // para paginación
     pageSize?: number;
-  segmentationStrategy?: 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
+    segmentationStrategy?: 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
     referenceString?: number[]; // para reemplazo de páginas
 }
 
