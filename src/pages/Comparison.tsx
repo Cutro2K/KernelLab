@@ -26,7 +26,6 @@ type AlgorithmMetrics = {
   osInternalFragmentation: number;
   faults: number;
   avgQueue: number;
-  completion: number;
   score: number;
 };
 
@@ -52,7 +51,6 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
       osInternalFragmentation: 0,
       faults: 0,
       avgQueue: 0,
-      completion: 0,
       score: 0,
     };
   }
@@ -67,30 +65,12 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
   const faults = stats.reduce((sum, item) => sum + item.pageFaults, 0);
   const avgQueue = Math.round(steps.reduce((sum, step) => sum + step.processQueue.length, 0) / steps.length);
 
-  const seenLoadedProcesses = new Set<string>();
-  for (const step of steps) {
-    for (const block of step.memoryState) {
-      if (block.isFree || !block.process) {
-        continue;
-      }
-
-      const processId = block.process.parentProcessId ?? block.process.id;
-      if (processId === 'os') {
-        continue;
-      }
-
-      seenLoadedProcesses.add(processId);
-    }
-  }
-
   const normalizedProcessCount = Math.max(1, totalProcesses);
-  const completion = Math.min(100, Math.round((seenLoadedProcesses.size / normalizedProcessCount) * 100));
 
   const usageComponent = usage * 0.35;
   const externalFragmentationComponent = (100 - externalFragmentation) * 0.2;
   const internalFragmentationComponent = (100 - internalFragmentation) * 0.15;
   const queueComponent = (100 - Math.min(100, (avgQueue / normalizedProcessCount) * 100)) * 0.15;
-  const completionComponent = completion * 0.15;
   const faultPenalty = Math.min(20, faults * 0.8);
   const score = Math.max(
     0,
@@ -101,13 +81,12 @@ function buildMetricsFromSteps(steps: SimulationStep[], totalProcesses: number):
         + externalFragmentationComponent
         + internalFragmentationComponent
         + queueComponent
-        + completionComponent
         - faultPenalty,
       ),
     ),
   );
 
-  return { usage, externalFragmentation, internalFragmentation, osInternalFragmentation, faults, avgQueue, completion, score };
+  return { usage, externalFragmentation, internalFragmentation, osInternalFragmentation, faults, avgQueue, score };
 }
 
 
@@ -858,14 +837,6 @@ export default function Comparison() {
       max: queueMax,
       suffix: '',
       higherIsBetter: false,
-    },
-    {
-      label: 'Completitud',
-      leftValue: leftMetrics.completion,
-      rightValue: rightMetrics.completion,
-      max: 100,
-      suffix: '%',
-      higherIsBetter: true,
     },
   ];
   // Generador de lista aleatoria de procesos, no reemplaza procesos existentes

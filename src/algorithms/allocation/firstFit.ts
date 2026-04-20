@@ -1,6 +1,6 @@
 import { type Process, type SimulationStep, type SimulationConfig, type MemoryBlock } from '../types';
 import { buildStepStats } from '../stepStats';
-import { cloneMemoryState } from '../../utils/helpers';
+import { cloneMemoryState } from '../../hooks/useAlgorithm';
 
 function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
     if (state.length === 0) return state;

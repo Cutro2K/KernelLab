@@ -1,7 +1,7 @@
 import { buildStepStats } from '../stepStats';
 import { buildSegmentsFromProcesses, type SegmentUnit } from '../nonContiguous/segments';
 import { type MemoryBlock, type Process, type SimulationConfig, type SimulationStep } from '../types';
-import { cloneMemoryState } from '../../utils/helpers';
+import { cloneMemoryState } from '../../hooks/useAlgorithm';
 
 type SegmentStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
 type ProcessRuntime = {
