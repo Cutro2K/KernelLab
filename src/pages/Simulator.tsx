@@ -11,6 +11,7 @@ import { ProcessQueue } from "../components/visualization/ProcessQueue";
 import { cloneMemoryState, computeStats, runAllocationSimulation } from "../hooks/useAlgorithm";
 import { useStepController } from "../hooks/useStepController";
 import { AddProcessButton } from "../components/visualization/AddProcessButton";
+import dice from '../assets/dice.svg';
 
 const PAGING_ALGORITHMS: AlgorithmOption[] = ['Paginacion Simple', 'OPT', 'FIFO', 'LRU', 'NRU', 'Segunda Oportunidad', 'Clock'];
 
@@ -201,7 +202,6 @@ export default function Simulator() {
       <div className="w-full lg:w-1/4 flex flex-col gap-2 border-2 border-black px-2 py-2 bg-[#ffb6c1]/10">
         <h1 className="text-lg font-bold pl-2 pb-2">&curren; PROCESOS</h1>
         
-        {/* Cambié la altura fija por max-h para que no sea inmenso en celular */}
         <div className="max-h-150 flex flex-col gap-3 overflow-y-auto border-y-2 border-black py-3">
           <SimProcessList />
         </div>
@@ -210,10 +210,12 @@ export default function Simulator() {
           <AddProcessButton
             processes={processes}
             onAddProcess={addProcess}
-            className="border-2 border-black"
-            buttonLabel="[+ Agregar]"
+            buttonLabel="+ Agregar proceso"
           />
-          <Button variant="secondary" onClick={handleRandomProcesses} className="border-2 border-black bg-transparent text-black hover:bg-black/10">[&curren; Random]</Button>
+          <Button variant="info" onClick={handleRandomProcesses} className="flex flex-row justify-center">
+            <img src={dice} alt="Randomize" className="w-5 ml-2 mr-2" />
+            Generar aleatorio
+          </Button>
         </div>
       </div>
 
@@ -266,17 +268,21 @@ export default function Simulator() {
           />      
         </div>
         
-        <div className="mx-auto flex justify-center w-full">
-          <StepControls
-            onPlay={handlePlay}
-            onPause={pause}
-            onStepForward={stepForward}
-            onStepBackward={stepBackward}
-            onReset={reset}
-            isRunning={isRunning}
-          />
-        </div>
-        <p className="text-center text-xs font-bold uppercase">Paso {currentStep + 1} / {maxStep + 1}</p>
+        <div className="mt-4 flex items-center justify-center">
+            <div className="flex w-full max-w-full flex-col items-center gap-1 text-xs font-bold min-[480px]:w-auto min-[480px]:flex-row min-[480px]:gap-3 min-[480px]:text-sm">
+              { /* Ver visualization/StepControl.tsx para información */ }
+              <StepControls
+                onPlay={handlePlay}
+                onPause={pause}
+                onStepForward={stepForward}
+                onStepBackward={stepBackward}
+                onReset={reset}
+                compact
+                isRunning={isRunning}
+              />
+              <span className="text-center">Paso {currentStep + 1} / {maxStep + 1}</span>
+            </div>
+          </div>
         <div className="w-full px-2">
           <div className="w-full min-h-50 border-2 border-black bg-transparent">
             <p className="p-4 leading-relaxed text-sm">

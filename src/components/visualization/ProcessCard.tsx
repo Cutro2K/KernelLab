@@ -77,6 +77,32 @@ export function ProcessCard({id, name, color, codeSize, stackSize, dataSize, hea
 
     const handleSelectColor = (color: string) => {
         setProcessColor(color);
+
+        if (!id) {
+            return;
+        }
+
+        useComparisonStore.setState((state) => {
+            if (!state.processes) return state;
+
+            return {
+                ...state,
+                processes: state.processes.map((process) =>
+                    process.id === id ? { ...process, color } : process,
+                ),
+            };
+        });
+
+        useSimulationStore.setState((state) => {
+            if (!state.processes) return state;
+
+            return {
+                ...state,
+                processes: state.processes.map((process) =>
+                    process.id === id ? { ...process, color } : process,
+                ),
+            };
+        });
     };
 
     const resetDraftFromProps = () => {

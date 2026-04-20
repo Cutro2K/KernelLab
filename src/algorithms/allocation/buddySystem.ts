@@ -154,7 +154,7 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
         stepNumber: step,
         memoryState: cloneMemoryState(state),
         processQueue: pending.map(p => ({...p})),
-        stats: buildStepStats(state, params.totalMemory),
+        stats: buildStepStats(state, totalMem),
         description: `Estado: memoria inicializada. Reservado para OS: ${params.osSize ?? 0}KB.`
     });
 
@@ -221,7 +221,7 @@ export function buddySystem(processes: Process[], _memoryState: MemoryBlock[], p
             stepNumber: step,
             memoryState: cloneMemoryState(state),
             processQueue: waitingQueue,
-            stats: buildStepStats(state, params.totalMemory),
+            stats: buildStepStats(state, totalMem),
             description: descriptionParts.join(' ')
         });
 

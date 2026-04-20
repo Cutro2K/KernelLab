@@ -283,9 +283,10 @@ function AnimatedPreviewBlock({
   );
 }
 
-function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[] | null; totalMemory: number }) {
+function MemoryPreview({ memoryState, totalMemory, processes }: { memoryState: MemoryBlock[] | null; totalMemory: number; processes: Process[] }) {
   const normalizedTotalMemory = Math.max(1, totalMemory);
   const sourceBlocks = memoryState ?? [];
+  const processColorById = new Map(processes.map((process) => [process.id, process.color]));
   const displayBlocks: DisplayBlock[] =
     sourceBlocks.length > 0
       ? sourceBlocks.map((block) => ({
@@ -306,7 +307,14 @@ function MemoryPreview({ memoryState, totalMemory }: { memoryState: MemoryBlock[
               ? `${block.process.parentProcessId} | ${block.process.segmentType ?? 'SEG'} | Pag ${block.process.pageIndex + 1} | ${block.size}KB`
               : `${block.process?.name ?? 'OS'} - ${block.size}KB`,
           size: block.size,
-          color: block.process?.color ?? '#4b5563',
+          color: (() => {
+            if (!block.process) {
+              return '#4b5563';
+            }
+
+            const ownerId = block.process.parentProcessId ?? block.process.id;
+            return processColorById.get(ownerId) ?? block.process.color ?? '#4b5563';
+          })(),
           isFree: block.isFree,
           isPagedSegment: Boolean(block.process?.parentProcessId && block.process.pageIndex !== undefined),
           internalFragmentation: !block.isFree
@@ -386,6 +394,7 @@ function SimulatorPanel({
   currentStep,
   maxStep,
   processQueueFunction,
+  processes,
 }: {
   title: string;
   allocationMode: AllocationMode;
@@ -413,6 +422,7 @@ function SimulatorPanel({
   currentStep: number;
   maxStep: number;
   processQueueFunction: (value : boolean) => void;
+  processes: Process[];
 }) {
   const subAlgorithmOptions = allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS : NON_CONTIGUOUS_ALGORITHMS;
   const showReplacementSelector = subAlgorithm === 'Paginacion Simple';
@@ -545,7 +555,7 @@ function SimulatorPanel({
           <div className="text-xs font-bold uppercase tracking-wide text-[#4b5563]">
             Paso {currentStep + 1} / {maxStep + 1}
           </div>
-          <MemoryPreview memoryState={memoryState} totalMemory={memorySize} />
+          <MemoryPreview memoryState={memoryState} totalMemory={memorySize} processes={processes} />
         </div>
 
         <div className="border-2 border-[#111] bg-white p-3">
@@ -1036,6 +1046,7 @@ export default function Comparison() {
             currentStep={currentStep}
             maxStep={maxStep}
             processQueueFunction={setViewProces1}
+            processes={processes}
           />
           <Modal 
                   isOpen={isViewProces1} 
@@ -1078,6 +1089,7 @@ export default function Comparison() {
             currentStep={currentStep}
             maxStep={maxStep}
             processQueueFunction={setViewProces2}
+            processes={processes}
           />
           <Modal 
                   isOpen={isViewProces2} 

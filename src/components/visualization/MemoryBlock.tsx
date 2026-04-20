@@ -7,9 +7,10 @@ interface MemoryBlockProps {
   block: MemoryBlockType;
   totalMemory: number;
   isLast?: boolean;
+  processColorOverride?: string;
 }
 
-export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockProps) {
+export function MemoryBlock({ block, totalMemory, isLast = false, processColorOverride }: MemoryBlockProps) {
   const normalizedTotalMemory = Math.max(1, totalMemory);
   const widthPercent = (block.size / normalizedTotalMemory) * 100;
   const showFullLabel = widthPercent >= 9;
@@ -36,7 +37,7 @@ export function MemoryBlock({ block, totalMemory, isLast = false }: MemoryBlockP
       ? `${ownerLabel}-P${(process?.pageIndex ?? 0) + 1}`
       : label.slice(0, 2).toUpperCase();
       
-  const occupiedColor = block.process?.color ?? '#6b7280';
+  const occupiedColor = processColorOverride ?? block.process?.color ?? '#6b7280';
 
   // --- CÁLCULO DE FRAGMENTACIÓN INTERNA ---
   // Restamos el tamaño del proceso al tamaño del bloque.
