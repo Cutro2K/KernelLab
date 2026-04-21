@@ -7,7 +7,7 @@ import {type AlgorithmOption, type AllocationMode } from '../algorithms/types';
 import {CONTIGUOUS_ALGORITHMS, NON_CONTIGUOUS_ALGORITHMS, PAGE_REPLACEMENT_ALGORITHMS} from '../algorithms/types';
 import { type Process } from '../algorithms/types';
 import { type MemoryBlock } from '../algorithms/types';
-import { type SimulationStep, type SimulationConfig} from '../algorithms/types';
+import { type SimulationStep, type SimulationConfig, type PagingReferenceEvent} from '../algorithms/types';
 import {computeStats, runAllocationSimulation, cloneMemoryState} from '../hooks/useAlgorithm';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStepController } from '../hooks/useStepController';
@@ -164,11 +164,17 @@ type DisplayBlock = {
   label: string;
   compactLabel: string;
   tooltipLabel: string;
+  identifierLabel: string;
+  segmentTypeLabel?: string;
+  pageNumber?: number;
   size: number;
   color?: string;
   isFree: boolean;
   isPagedSegment: boolean;
   internalFragmentation: number;
+  bitsLabel?: string;
+  referenceBit?: 0 | 1;
+  modifiedBit?: 0 | 1;
 };
 
 function AnimatedPreviewBlock({
@@ -189,8 +195,12 @@ function AnimatedPreviewBlock({
   const tooltipContent = (
     <div className="space-y-1">
       <div className="text-[11px] font-black uppercase tracking-wide">{block.isFree ? 'Bloque libre' : 'Bloque ocupado'}</div>
-      <div>ID: {block.compactLabel}</div>
-      <div>Detalle: {block.label}</div>
+      <div>ID: {block.identifierLabel}</div>
+      {block.isPagedSegment && <div>Tipo: {block.segmentTypeLabel ?? 'Seg'}</div>}
+      {block.isPagedSegment && <div>Pagina: {block.pageNumber ?? 1}</div>}
+      {block.isPagedSegment && block.referenceBit !== undefined && block.modifiedBit !== undefined && (
+        <div>Bits: R={block.referenceBit} M={block.modifiedBit}</div>
+      )}
       <div>Tamano: {block.size}KB</div>
       {!block.isFree && (
         <div className={block.internalFragmentation > 0 ? 'font-bold text-yellow-400' : ''}>
@@ -252,9 +262,10 @@ function AnimatedPreviewBlock({
           <div className="flex flex-col items-center">
             <span className="w-full truncate text-xs uppercase">{block.label}</span>
             <span className="w-full truncate text-[11px] font-bold">{block.size}KB</span>
+            {block.bitsLabel && <span className="w-full truncate text-[11px] font-bold">{block.bitsLabel}</span>}
           </div>
         ) : showCompactLabel ? (
-          <span className="text-[10px] uppercase">{compactLabel}</span>
+          <span className="text-[10px] uppercase">{block.bitsLabel ? `${compactLabel} ${block.bitsLabel}` : compactLabel}</span>
         ) : null}
       </div>
       </motion.div>
@@ -285,6 +296,13 @@ function MemoryPreview({ memoryState, totalMemory, processes }: { memoryState: M
             : block.process?.parentProcessId && block.process.pageIndex !== undefined
               ? `${block.process.parentProcessId} | ${block.process.segmentType ?? 'SEG'} | Pag ${block.process.pageIndex + 1} | ${block.size}KB`
               : `${block.process?.name ?? 'OS'} - ${block.size}KB`,
+          identifierLabel: block.isFree
+            ? 'LIBRE'
+            : block.process?.parentProcessId && block.process.pageIndex !== undefined
+              ? `${block.process.parentProcessId}-P${block.process.pageIndex + 1}`
+              : block.process?.name ?? 'OS',
+          segmentTypeLabel: block.process?.segmentType,
+          pageNumber: block.process?.pageIndex !== undefined ? block.process.pageIndex + 1 : undefined,
           size: block.size,
           color: (() => {
             if (!block.process) {
@@ -299,6 +317,12 @@ function MemoryPreview({ memoryState, totalMemory, processes }: { memoryState: M
           internalFragmentation: !block.isFree
             ? Math.max(0, block.size - (block.usedSize ?? block.process?.size ?? block.size))
             : 0,
+          bitsLabel:
+            block.process?.parentProcessId && block.process.pageIndex !== undefined && block.pageMeta
+              ? `R${block.pageMeta.referenceBit} M${block.pageMeta.modifiedBit}`
+              : undefined,
+          referenceBit: block.pageMeta?.referenceBit,
+          modifiedBit: block.pageMeta?.modifiedBit,
         }))
       : [
           {
@@ -306,10 +330,14 @@ function MemoryPreview({ memoryState, totalMemory, processes }: { memoryState: M
             label: 'LIBRE',
             compactLabel: 'L',
             tooltipLabel: `LIBRE - ${normalizedTotalMemory}KB`,
+            identifierLabel: 'LIBRE',
             size: normalizedTotalMemory,
             isFree: true,
             isPagedSegment: false,
             internalFragmentation: 0,
+            bitsLabel: undefined,
+            referenceBit: undefined,
+            modifiedBit: undefined,
           },
         ];
 
@@ -320,10 +348,14 @@ function MemoryPreview({ memoryState, totalMemory, processes }: { memoryState: M
       label: 'LIBRE',
       compactLabel: 'L',
       tooltipLabel: `LIBRE - ${normalizedTotalMemory - usedSize}KB`,
+      identifierLabel: 'LIBRE',
       size: normalizedTotalMemory - usedSize,
       isFree: true,
       isPagedSegment: false,
       internalFragmentation: 0,
+      bitsLabel: undefined,
+      referenceBit: undefined,
+      modifiedBit: undefined,
     });
   }
 
@@ -373,6 +405,8 @@ function SimulatorPanel({
   currentStep,
   maxStep,
   processQueueFunction,
+  onReferenceView,
+  canViewReferences,
   processes,
 }: {
   title: string;
@@ -401,6 +435,8 @@ function SimulatorPanel({
   currentStep: number;
   maxStep: number;
   processQueueFunction: (value : boolean) => void;
+  onReferenceView: () => void;
+  canViewReferences: boolean;
   processes: Process[];
 }) {
   const subAlgorithmOptions = allocationMode === 'Contigua' ? CONTIGUOUS_ALGORITHMS : NON_CONTIGUOUS_ALGORITHMS;
@@ -562,10 +598,190 @@ function SimulatorPanel({
                 [Ver Procesos]
               </Button>
             </div>
+            <Button
+              variant="secondary"
+              className="col-span-2 border-2 border-black"
+              onClick={onReferenceView}
+              disabled={!canViewReferences}
+            >
+              [Ver Referencias]
+            </Button>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function buildReferenceData(simulationSteps: SimulationStep[], activeStep: number) {
+  const stepData = simulationSteps[Math.min(activeStep, Math.max(0, simulationSteps.length - 1))] ?? null;
+  const currentEvents = stepData?.referenceEvents ?? [];
+  const futureEvents: PagingReferenceEvent[] = [];
+
+  for (let stepIndex = activeStep + 1; stepIndex < simulationSteps.length; stepIndex += 1) {
+    const events = simulationSteps[stepIndex].referenceEvents ?? [];
+    for (const event of events) {
+      futureEvents.push(event);
+      if (futureEvents.length >= 100) {
+        break;
+      }
+    }
+    if (futureEvents.length >= 100) {
+      break;
+    }
+  }
+
+  const loadedPageForecast = (() => {
+    const blocks = stepData?.memoryState ?? [];
+    const pagedBlocks = blocks.filter((block) => !block.isFree && block.process?.id && block.process?.pageIndex !== undefined);
+    return pagedBlocks.map((block) => {
+      const pageId = block.process?.id ?? '';
+      const nextReference = futureEvents.find((event) => event.pageId === pageId);
+      const nextWrite = futureEvents.find((event) => event.pageId === pageId && event.operation === 'write');
+      return {
+        label: block.process?.name ?? pageId,
+        nextReferenceStep: nextReference?.step,
+        nextWriteStep: nextWrite?.step,
+      };
+    });
+  })();
+
+  const loadedSegmentForecast = (() => {
+    const blocks = stepData?.memoryState ?? [];
+    const segmentMap = new Map<string, string>();
+
+    for (const block of blocks) {
+      if (block.isFree || !block.process?.segmentId) {
+        continue;
+      }
+      const label = `${block.process.parentProcessId ?? block.process.name}-${block.process.segmentType ?? 'Seg'}`;
+      segmentMap.set(block.process.segmentId, label);
+    }
+
+    return Array.from(segmentMap.entries()).map(([segmentId, label]) => {
+      const nextReference = futureEvents.find((event) => event.pageId.startsWith(`${segmentId}-pg-`));
+      const nextWrite = futureEvents.find(
+        (event) => event.pageId.startsWith(`${segmentId}-pg-`) && event.operation === 'write',
+      );
+      return {
+        label,
+        nextReferenceStep: nextReference?.step,
+        nextWriteStep: nextWrite?.step,
+      };
+    });
+  })();
+
+  return {
+    currentEvents,
+    futureEvents,
+    loadedPageForecast,
+    loadedSegmentForecast,
+  };
+}
+
+function ReferenceTimelineModal({
+  isOpen,
+  onClose,
+  title,
+  isPagingAlgorithm,
+  step,
+  referenceData,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  isPagingAlgorithm: boolean;
+  step: number;
+  referenceData: ReturnType<typeof buildReferenceData>;
+}) {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      maxWidth="max-w-4xl"
+    >
+      <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-3 text-sm">
+        {!isPagingAlgorithm ? (
+          <p>Disponible solo para algoritmos de paginación.</p>
+        ) : (
+          <div className="space-y-4">
+            <section className="border-2 border-black bg-white p-3">
+              <h3 className="mb-2 font-bold">Paso actual: {step}</h3>
+              {referenceData.currentEvents.length === 0 ? (
+                <p>Sin referencias en este paso.</p>
+              ) : (
+                <div className="space-y-1">
+                  {referenceData.currentEvents.map((event, index) => (
+                    <div key={`${event.pageId}-${event.step}-${index}`} className="flex flex-wrap gap-2 border border-black px-2 py-1">
+                      <span className="font-bold">t{event.step}</span>
+                      <span>{event.processName}</span>
+                      <span>{event.segmentType} P{event.pageNumber}</span>
+                      <span className="font-mono uppercase">{event.operation}</span>
+                      <span className={`font-bold ${event.outcome === 'hit' ? 'text-green-700' : event.outcome === 'fault' ? 'text-red-700' : 'text-amber-700'}`}>
+                        {event.outcome}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="border-2 border-black bg-white p-3">
+              <h3 className="mb-2 font-bold">Próximas referencias (preview)</h3>
+              {referenceData.futureEvents.length === 0 ? (
+                <p>No hay referencias futuras.</p>
+              ) : (
+                <div className="space-y-1">
+                  {referenceData.futureEvents.slice(0, 25).map((event, index) => (
+                    <div key={`future-${event.pageId}-${event.step}-${index}`} className="flex flex-wrap gap-2 border border-black px-2 py-1">
+                      <span className="font-bold">t{event.step}</span>
+                      <span>{event.processName}</span>
+                      <span>{event.segmentType} P{event.pageNumber}</span>
+                      <span className="font-mono uppercase">{event.operation}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="border-2 border-black bg-white p-3">
+              <h3 className="mb-2 font-bold">Próximo uso por página cargada</h3>
+              {referenceData.loadedPageForecast.length === 0 ? (
+                <p>No hay páginas cargadas en este paso.</p>
+              ) : (
+                <div className="space-y-1">
+                  {referenceData.loadedPageForecast.map((item) => (
+                    <div key={item.label} className="flex flex-wrap justify-between gap-2 border border-black px-2 py-1">
+                      <span className="font-semibold">{item.label}</span>
+                      <span>Próx ref: {item.nextReferenceStep !== undefined ? `t${item.nextReferenceStep}` : '-'}</span>
+                      <span>Próx modif: {item.nextWriteStep !== undefined ? `t${item.nextWriteStep}` : '-'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="border-2 border-black bg-white p-3">
+              <h3 className="mb-2 font-bold">Próximo uso por segmento cargado</h3>
+              {referenceData.loadedSegmentForecast.length === 0 ? (
+                <p>No hay segmentos cargados en este paso.</p>
+              ) : (
+                <div className="space-y-1">
+                  {referenceData.loadedSegmentForecast.map((item) => (
+                    <div key={item.label} className="flex flex-wrap justify-between gap-2 border border-black px-2 py-1">
+                      <span className="font-semibold">{item.label}</span>
+                      <span>Próx ref: {item.nextReferenceStep !== undefined ? `t${item.nextReferenceStep}` : '-'}</span>
+                      <span>Próx modif: {item.nextWriteStep !== undefined ? `t${item.nextWriteStep}` : '-'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -598,6 +814,12 @@ export const CompProcessList = () => {
 
 // Página principal de comparación: sincroniza ambos algoritmos, pasos y gráfico global.
 export default function Comparison() {
+  const SHARED_REFERENCE_SEED = 42;
+  const SHARED_REFERENCE_LOCALITY = 0.7;
+  const SHARED_MAX_REFS_PER_CYCLE = 4;
+  const SHARED_NRU_RESET_INTERVAL = 4;
+  const SHARED_ENABLE_WRITES = true;
+
   const addProcess = useComparisonStore((state) => state.addProcess);
   const setMemoryState1 = useComparisonStore((state) => state.setMemoryState1);
   const setMemoryState2 = useComparisonStore((state) => state.setMemoryState2);
@@ -630,6 +852,8 @@ export default function Comparison() {
   const [autoPlayPending, setAutoPlayPending] = useState(false);
   const [isViewProces1, setViewProces1] = useState(false);
   const [isViewProces2, setViewProces2] = useState(false);
+  const [isViewReferences1, setViewReferences1] = useState(false);
+  const [isViewReferences2, setViewReferences2] = useState(false);
   const maxStep = Math.max(0, Math.max(leftSteps.length, rightSteps.length) - 1);
   const {
     currentStep,
@@ -722,6 +946,11 @@ export default function Comparison() {
       osSize: leftOsSize,
       pageSize: leftSubAlgorithm === 'Paginacion Simple' ? leftPageSize : undefined,
       segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
+      referenceSeed: SHARED_REFERENCE_SEED,
+      referenceLocality: SHARED_REFERENCE_LOCALITY,
+      maxReferencesPerCycle: SHARED_MAX_REFS_PER_CYCLE,
+      nruResetInterval: SHARED_NRU_RESET_INTERVAL,
+      enableWriteReferences: SHARED_ENABLE_WRITES,
     });
 
     setConfigParams2({
@@ -731,6 +960,11 @@ export default function Comparison() {
       osSize: rightOsSize,
       pageSize: rightSubAlgorithm === 'Paginacion Simple' ? rightPageSize : undefined,
       segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
+      referenceSeed: SHARED_REFERENCE_SEED,
+      referenceLocality: SHARED_REFERENCE_LOCALITY,
+      maxReferencesPerCycle: SHARED_MAX_REFS_PER_CYCLE,
+      nruResetInterval: SHARED_NRU_RESET_INTERVAL,
+      enableWriteReferences: SHARED_ENABLE_WRITES,
     });
   }, [
     leftMemoryExponent,
@@ -752,6 +986,10 @@ export default function Comparison() {
 
   const leftCurrentStep = leftSteps[Math.min(currentStep, Math.max(0, leftSteps.length - 1))] ?? null;
   const rightCurrentStep = rightSteps[Math.min(currentStep, Math.max(0, rightSteps.length - 1))] ?? null;
+  const leftReferenceData = buildReferenceData(leftSteps, currentStep);
+  const rightReferenceData = buildReferenceData(rightSteps, currentStep);
+  const leftCanViewReferences = leftSubAlgorithm === 'Paginacion Simple' && leftSteps.length > 0;
+  const rightCanViewReferences = rightSubAlgorithm === 'Paginacion Simple' && rightSteps.length > 0;
 
   useEffect(() => {
     const leftStep = leftCurrentStep;
@@ -891,6 +1129,11 @@ export default function Comparison() {
       osSize: leftOsSize,
       pageSize: leftSubAlgorithm === 'Paginacion Simple' ? leftPageSize : undefined,
       segmentationStrategy: leftSubAlgorithm === 'Segmentacion' ? leftSegmentationStrategy : undefined,
+      referenceSeed: SHARED_REFERENCE_SEED,
+      referenceLocality: SHARED_REFERENCE_LOCALITY,
+      maxReferencesPerCycle: SHARED_MAX_REFS_PER_CYCLE,
+      nruResetInterval: SHARED_NRU_RESET_INTERVAL,
+      enableWriteReferences: SHARED_ENABLE_WRITES,
     };
     // Configuracion derecha
     const rightConfig: SimulationConfig = {
@@ -900,6 +1143,11 @@ export default function Comparison() {
       osSize: rightOsSize,
       pageSize: rightSubAlgorithm === 'Paginacion Simple' ? rightPageSize : undefined,
       segmentationStrategy: rightSubAlgorithm === 'Segmentacion' ? rightSegmentationStrategy : undefined,
+      referenceSeed: SHARED_REFERENCE_SEED,
+      referenceLocality: SHARED_REFERENCE_LOCALITY,
+      maxReferencesPerCycle: SHARED_MAX_REFS_PER_CYCLE,
+      nruResetInterval: SHARED_NRU_RESET_INTERVAL,
+      enableWriteReferences: SHARED_ENABLE_WRITES,
     };
     // Vectores de Steps: SimulationStep[]
     const generatedLeftSteps = runAllocationSimulation(leftSimulationAlgorithm, processes, leftConfig);
@@ -1017,6 +1265,8 @@ export default function Comparison() {
             currentStep={currentStep}
             maxStep={maxStep}
             processQueueFunction={setViewProces1}
+            onReferenceView={() => setViewReferences1(true)}
+            canViewReferences={leftCanViewReferences}
             processes={processes}
           />
           <Modal 
@@ -1029,6 +1279,14 @@ export default function Comparison() {
                     <ProcessQueue mode="comparison1"/>
                   </div>
           </Modal>
+          <ReferenceTimelineModal
+            isOpen={isViewReferences1}
+            onClose={() => setViewReferences1(false)}
+            title="* REFERENCIAS Y MODIFICACIONES (SIMULADOR A)"
+            isPagingAlgorithm={leftSubAlgorithm === 'Paginacion Simple'}
+            step={currentStep}
+            referenceData={leftReferenceData}
+          />
           <SimulatorPanel
             title="Simulador B"
             allocationMode={allocationMode}
@@ -1060,6 +1318,8 @@ export default function Comparison() {
             currentStep={currentStep}
             maxStep={maxStep}
             processQueueFunction={setViewProces2}
+            onReferenceView={() => setViewReferences2(true)}
+            canViewReferences={rightCanViewReferences}
             processes={processes}
           />
           <Modal 
@@ -1072,6 +1332,14 @@ export default function Comparison() {
                     <ProcessQueue mode="comparison2"/>
                   </div>
           </Modal>
+          <ReferenceTimelineModal
+            isOpen={isViewReferences2}
+            onClose={() => setViewReferences2(false)}
+            title="* REFERENCIAS Y MODIFICACIONES (SIMULADOR B)"
+            isPagingAlgorithm={rightSubAlgorithm === 'Paginacion Simple'}
+            step={currentStep}
+            referenceData={rightReferenceData}
+          />
         </section>
 
         <section className="border-2 border-[#111] bg-white p-4 shadow-[6px_6px_0_rgba(17,17,17,0.08)]">

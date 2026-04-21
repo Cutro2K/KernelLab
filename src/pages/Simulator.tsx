@@ -2,7 +2,7 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { ProcessCard, RETRO_NEUTRAL_COLORS } from "../components/visualization/ProcessCard";
 import { StepControls } from '../components/visualization/StepControls';
-import { type Process, type SimulationStep, type SimulationConfig, type AlgorithmOption} from  "../algorithms/types";
+import { type Process, type SimulationStep, type SimulationConfig, type AlgorithmOption, type PagingReferenceEvent } from  "../algorithms/types";
 import { MemoryMap } from "../components/visualization/MemoryMap";
 import { AlgorithmConfig, MemoryConfig } from "../components/forms/AlgorithmConfig";
 import { useSimulationStore } from "../store/simulationStore";
@@ -111,6 +111,7 @@ export default function Simulator() {
   };
   
   const [isViewProces, setViewProces] = useState(false);
+  const [isReferenceModalOpen, setReferenceModalOpen] = useState(false);
 
   const runSimulation = () => {
     const config: SimulationConfig = {
@@ -191,6 +192,60 @@ export default function Simulator() {
   const finishedCount = processes.filter((process) => process.arrivalTime + process.duration <= currentStep).length;
   const waitingCount = Math.max(0, processes.length - runningCount - finishedCount);
   const isPagingAlgorithm = PAGING_ALGORITHMS.includes(algorithm);
+  const currentReferenceEvents = currentSimulationStep?.referenceEvents ?? [];
+  const futureReferenceEvents = (() => {
+    const collected: PagingReferenceEvent[] = [];
+    for (let stepIndex = currentStep + 1; stepIndex < steps.length; stepIndex += 1) {
+      const events = steps[stepIndex].referenceEvents ?? [];
+      for (const event of events) {
+        collected.push(event);
+        if (collected.length >= 100) {
+          return collected;
+        }
+      }
+    }
+    return collected;
+  })();
+
+  const loadedPageForecast = (() => {
+    const blocks = currentSimulationStep?.memoryState ?? [];
+    const pagedBlocks = blocks.filter((block) => !block.isFree && block.process?.id && block.process?.pageIndex !== undefined);
+    return pagedBlocks.map((block) => {
+      const pageId = block.process?.id ?? '';
+      const nextReference = futureReferenceEvents.find((event) => event.pageId === pageId);
+      const nextWrite = futureReferenceEvents.find((event) => event.pageId === pageId && event.operation === 'write');
+      return {
+        label: block.process?.name ?? pageId,
+        nextReferenceStep: nextReference?.step,
+        nextWriteStep: nextWrite?.step,
+      };
+    });
+  })();
+
+  const loadedSegmentForecast = (() => {
+    const blocks = currentSimulationStep?.memoryState ?? [];
+    const segmentMap = new Map<string, string>();
+
+    for (const block of blocks) {
+      if (block.isFree || !block.process?.segmentId) {
+        continue;
+      }
+      const label = `${block.process.parentProcessId ?? block.process.name}-${block.process.segmentType ?? 'Seg'}`;
+      segmentMap.set(block.process.segmentId, label);
+    }
+
+    return Array.from(segmentMap.entries()).map(([segmentId, label]) => {
+      const nextReference = futureReferenceEvents.find((event) => event.pageId.startsWith(`${segmentId}-pg-`));
+      const nextWrite = futureReferenceEvents.find(
+        (event) => event.pageId.startsWith(`${segmentId}-pg-`) && event.operation === 'write',
+      );
+      return {
+        label,
+        nextReferenceStep: nextReference?.step,
+        nextWriteStep: nextWrite?.step,
+      };
+    });
+  })();
 
   return (
     
@@ -341,6 +396,14 @@ export default function Simulator() {
           > 
           [Ver Procesos]
           </Button>
+          <Button
+            variant="secondary"
+            className="border-2 border-black"
+            onClick={() => setReferenceModalOpen(true)}
+            disabled={!isPagingAlgorithm || steps.length === 0}
+          >
+            [Ver Referencias]
+          </Button>
         </div>
       </div>
 
@@ -352,6 +415,94 @@ export default function Simulator() {
       >
         <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-2">
           <ProcessQueue/>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isReferenceModalOpen}
+        onClose={() => setReferenceModalOpen(false)}
+        title="* REFERENCIAS Y MODIFICACIONES"
+        maxWidth="max-w-4xl"
+      >
+        <div className="max-h-[70vh] overflow-y-auto bg-gray-100 p-3 text-sm">
+          {!isPagingAlgorithm ? (
+            <p>Disponible solo para algoritmos de paginación.</p>
+          ) : (
+            <div className="space-y-4">
+              <section className="border-2 border-black bg-white p-3">
+                <h3 className="mb-2 font-bold">Paso actual: {currentStep}</h3>
+                {currentReferenceEvents.length === 0 ? (
+                  <p>Sin referencias en este paso.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {currentReferenceEvents.map((event, index) => (
+                      <div key={`${event.pageId}-${event.step}-${index}`} className="flex flex-wrap gap-2 border border-black px-2 py-1">
+                        <span className="font-bold">t{event.step}</span>
+                        <span>{event.processName}</span>
+                        <span>{event.segmentType} P{event.pageNumber}</span>
+                        <span className="font-mono uppercase">{event.operation}</span>
+                        <span className={`font-bold ${event.outcome === 'hit' ? 'text-green-700' : event.outcome === 'fault' ? 'text-red-700' : 'text-amber-700'}`}>
+                          {event.outcome}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="border-2 border-black bg-white p-3">
+                <h3 className="mb-2 font-bold">Próximas referencias (preview)</h3>
+                {futureReferenceEvents.length === 0 ? (
+                  <p>No hay referencias futuras.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {futureReferenceEvents.slice(0, 25).map((event, index) => (
+                      <div key={`future-${event.pageId}-${event.step}-${index}`} className="flex flex-wrap gap-2 border border-black px-2 py-1">
+                        <span className="font-bold">t{event.step}</span>
+                        <span>{event.processName}</span>
+                        <span>{event.segmentType} P{event.pageNumber}</span>
+                        <span className="font-mono uppercase">{event.operation}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="border-2 border-black bg-white p-3">
+                <h3 className="mb-2 font-bold">Próximo uso por página cargada</h3>
+                {loadedPageForecast.length === 0 ? (
+                  <p>No hay páginas cargadas en este paso.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {loadedPageForecast.map((item) => (
+                      <div key={item.label} className="flex flex-wrap justify-between gap-2 border border-black px-2 py-1">
+                        <span className="font-semibold">{item.label}</span>
+                        <span>Próx ref: {item.nextReferenceStep !== undefined ? `t${item.nextReferenceStep}` : '-'}</span>
+                        <span>Próx modif: {item.nextWriteStep !== undefined ? `t${item.nextWriteStep}` : '-'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="border-2 border-black bg-white p-3">
+                <h3 className="mb-2 font-bold">Próximo uso por segmento cargado</h3>
+                {loadedSegmentForecast.length === 0 ? (
+                  <p>No hay segmentos cargados en este paso.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {loadedSegmentForecast.map((item) => (
+                      <div key={item.label} className="flex flex-wrap justify-between gap-2 border border-black px-2 py-1">
+                        <span className="font-semibold">{item.label}</span>
+                        <span>Próx ref: {item.nextReferenceStep !== undefined ? `t${item.nextReferenceStep}` : '-'}</span>
+                        <span>Próx modif: {item.nextWriteStep !== undefined ? `t${item.nextWriteStep}` : '-'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
         </div>
       </Modal>
 

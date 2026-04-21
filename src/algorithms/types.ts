@@ -61,6 +61,12 @@ export interface MemoryBlock {
   usedSize?: number; // Bytes realmente usados dentro del bloque (permite modelar frag. interna del OS).
   process: Process | null;
   isFree: boolean;
+  pageMeta?: {
+    loadedAt: number;
+    lastUsed: number;
+    referenceBit: 0 | 1;
+    modifiedBit: 0 | 1;
+  };
 }
 
 export interface AlgorithmMeta {
@@ -84,6 +90,17 @@ export interface StepStats {
     memoryUsage: number; // porcentaje
 }
 
+  export interface PagingReferenceEvent {
+    step: number;
+    processId: string;
+    processName: string;
+    segmentType: SegmentType;
+    pageId: string;
+    pageNumber: number;
+    operation: 'read' | 'write';
+    outcome: 'hit' | 'fault' | 'blocked';
+  }
+
 export interface SimulationStep {
     stepNumber: number;
     action?: string;
@@ -92,6 +109,7 @@ export interface SimulationStep {
     processQueue: Process[];
     highlights?: string[];
     stats: StepStats;
+    referenceEvents?: PagingReferenceEvent[];
 }
 
 export interface SimulationConfig {
@@ -103,6 +121,11 @@ export interface SimulationConfig {
     pageSize?: number;
     segmentationStrategy?: 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
     referenceString?: number[]; // para reemplazo de páginas
+  referenceSeed?: number;
+  referenceLocality?: number;
+  maxReferencesPerCycle?: number;
+  nruResetInterval?: number;
+  enableWriteReferences?: boolean;
 }
 
 export interface SimulationStore {

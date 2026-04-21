@@ -5,7 +5,7 @@ import { selectLruVictim } from '../replacement/lru';
 import { selectOptimalVictim } from '../replacement/optimal';
 import { selectClockVictim, selectNruVictim, selectSecondChanceVictim } from '../replacement/clock';
 import { type FrameMeta, type ReplacementCandidate } from '../replacement/types';
-import { type AlgorithmOption, type MemoryBlock, type Process, type SimulationConfig, type SimulationStep } from '../types';
+import { type AlgorithmOption, type MemoryBlock, type PagingReferenceEvent, type Process, type SimulationConfig, type SimulationStep } from '../types';
 
 type ReplacementAlgo = Extract<AlgorithmOption, 'Paginacion Simple' | 'OPT' | 'FIFO' | 'LRU' | 'NRU' | 'Segunda Oportunidad' | 'Clock'>;
 
@@ -23,10 +23,40 @@ type SegmentPageRequest = {
 	baseProcess: Process;
 };
 
+type AccessOp = 'read' | 'write';
+
+type AccessEvent = {
+	step: number;
+	pageId: string;
+	parentProcessId: string;
+	parentProcessName: string;
+	segmentType: SegmentUnit['segmentType'];
+	op: AccessOp;
+};
+
+type SegmentRuntime = {
+	segmentId: string;
+	parentProcessId: string;
+	parentProcessName: string;
+	segmentType: SegmentUnit['segmentType'];
+	arrivalTime: number;
+	pageCount: number;
+	pageIds: string[];
+	size: number;
+	baseProcess: Process;
+};
+
+type AccessPlan = {
+	eventsByStep: Map<number, AccessEvent[]>;
+	flatEvents: AccessEvent[];
+	maxStep: number;
+};
+
 function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
 	return state.map((block) => ({
 		...block,
 		process: block.process ? { ...block.process } : null,
+		pageMeta: block.pageMeta ? { ...block.pageMeta } : undefined,
 	}));
 }
 
@@ -74,6 +104,192 @@ function toSegmentPages(segments: SegmentUnit[], pageSize: number): SegmentPageR
 	});
 }
 
+function toSegmentRuntime(segments: SegmentUnit[], pageSize: number): SegmentRuntime[] {
+	return segments
+		.filter((segment) => segment.size > 0)
+		.map((segment) => {
+			const pageCount = Math.max(1, Math.ceil(segment.size / pageSize));
+			const pageIds = Array.from({ length: pageCount }, (_, pageIndex) => `${segment.id}-pg-${pageIndex}`);
+			return {
+				segmentId: segment.id,
+				parentProcessId: segment.parentProcessId,
+				parentProcessName: segment.parentProcessName,
+				segmentType: segment.segmentType,
+				arrivalTime: segment.arrivalTime,
+				pageCount,
+				pageIds,
+				size: segment.size,
+				baseProcess: segment.baseProcess,
+			};
+		});
+}
+
+function createPrng(seed: number): () => number {
+	let state = seed >>> 0;
+	return () => {
+		state = (1664525 * state + 1013904223) >>> 0;
+		return state / 4294967296;
+	};
+}
+
+function clamp01(value: number): number {
+	if (!Number.isFinite(value)) {
+		return 0;
+	}
+	if (value < 0) {
+		return 0;
+	}
+	if (value > 1) {
+		return 1;
+	}
+	return value;
+}
+
+function selectWeightedIndex(weights: number[], rand: () => number): number {
+	const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+	if (totalWeight <= 0) {
+		return 0;
+	}
+
+	const target = rand() * totalWeight;
+	let accumulated = 0;
+	for (let index = 0; index < weights.length; index += 1) {
+		accumulated += Math.max(0, weights[index]);
+		if (target <= accumulated) {
+			return index;
+		}
+	}
+
+	return Math.max(0, weights.length - 1);
+}
+
+function getProcessEndStep(process: Process): number {
+	return process.arrivalTime + Math.max(1, process.duration);
+}
+
+function getBaseSegmentWeight(segmentType: SegmentUnit['segmentType']): number {
+	if (segmentType === 'Code') return 0.35;
+	if (segmentType === 'Data') return 0.3;
+	if (segmentType === 'Heap') return 0.2;
+	return 0.15;
+}
+
+function getAdjustedSegmentWeight(segmentType: SegmentUnit['segmentType'], progress: number): number {
+	let weight = getBaseSegmentWeight(segmentType);
+	if (progress <= 0.25) {
+		if (segmentType === 'Code') weight += 0.1;
+		if (segmentType === 'Heap') weight -= 0.05;
+		if (segmentType === 'Stack') weight -= 0.05;
+	}
+	if (progress >= 0.75) {
+		if (segmentType === 'Stack') weight += 0.1;
+		if (segmentType === 'Code') weight -= 0.05;
+		if (segmentType === 'Data') weight -= 0.05;
+	}
+	return Math.max(0.01, weight);
+}
+
+function chooseOperation(segmentType: SegmentUnit['segmentType'], rand: () => number, enableWrites: boolean): AccessOp {
+	if (!enableWrites) {
+		return 'read';
+	}
+
+	const writeProbability = segmentType === 'Code'
+		? 0.05
+		: segmentType === 'Data'
+			? 0.3
+			: segmentType === 'Heap'
+				? 0.4
+				: 0.45;
+
+	return rand() < writeProbability ? 'write' : 'read';
+}
+
+function choosePageIndex(segment: SegmentRuntime, lastPageBySegment: Map<string, number>, locality: number, rand: () => number): number {
+	const last = lastPageBySegment.get(segment.segmentId);
+	if (last === undefined || segment.pageCount <= 1 || rand() > locality) {
+		return Math.floor(rand() * segment.pageCount);
+	}
+
+	const roll = rand();
+	if (roll < 0.6) {
+		return last;
+	}
+
+	if (roll < 0.85) {
+		return Math.min(segment.pageCount - 1, last + 1);
+	}
+
+	return Math.max(0, last - 1);
+}
+
+function buildAccessPlan(segments: SegmentRuntime[], processes: Process[], config: SimulationConfig): AccessPlan {
+	const seed = Math.floor(config.referenceSeed ?? 42);
+	const rand = createPrng(seed);
+	const locality = clamp01(config.referenceLocality ?? 0.7);
+	const maxReferencesPerCycle = Math.max(1, Math.min(8, Math.floor(config.maxReferencesPerCycle ?? 4)));
+	const enableWrites = config.enableWriteReferences ?? true;
+	const maxProcessEndStep = processes.reduce((max, process) => Math.max(max, getProcessEndStep(process)), 0);
+	const maxSegmentArrival = segments.reduce((max, segment) => Math.max(max, segment.arrivalTime), 0);
+	const maxStep = Math.max(maxProcessEndStep, maxSegmentArrival);
+
+	const segmentsByProcess = new Map<string, SegmentRuntime[]>();
+	for (const segment of segments) {
+		const current = segmentsByProcess.get(segment.parentProcessId) ?? [];
+		current.push(segment);
+		segmentsByProcess.set(segment.parentProcessId, current);
+	}
+
+	const lastPageBySegment = new Map<string, number>();
+	const eventsByStep = new Map<number, AccessEvent[]>();
+	const flatEvents: AccessEvent[] = [];
+
+	for (let step = 0; step <= maxStep; step += 1) {
+		const stepEvents: AccessEvent[] = [];
+
+		for (const process of processes) {
+			const processEnd = getProcessEndStep(process);
+			if (step < process.arrivalTime || step >= processEnd) {
+				continue;
+			}
+
+			const processSegments = (segmentsByProcess.get(process.id) ?? []).filter((segment) => segment.arrivalTime <= step);
+			if (processSegments.length === 0) {
+				continue;
+			}
+
+			const refsForCycle = Math.min(maxReferencesPerCycle, 1 + Math.floor(process.size / 64));
+			const processLifeSpan = Math.max(1, processEnd - process.arrivalTime);
+			const progress = clamp01((step - process.arrivalTime) / processLifeSpan);
+
+			for (let count = 0; count < refsForCycle; count += 1) {
+				const weights = processSegments.map((segment) => getAdjustedSegmentWeight(segment.segmentType, progress));
+				const chosenSegment = processSegments[selectWeightedIndex(weights, rand)];
+				const pageIndex = choosePageIndex(chosenSegment, lastPageBySegment, locality, rand);
+				lastPageBySegment.set(chosenSegment.segmentId, pageIndex);
+
+				stepEvents.push({
+					step,
+					pageId: chosenSegment.pageIds[pageIndex],
+					parentProcessId: chosenSegment.parentProcessId,
+					parentProcessName: chosenSegment.parentProcessName,
+					segmentType: chosenSegment.segmentType,
+					op: chooseOperation(chosenSegment.segmentType, rand, enableWrites),
+				});
+			}
+		}
+
+		eventsByStep.set(step, stepEvents);
+		flatEvents.push(...stepEvents);
+	}
+
+	return {
+		eventsByStep,
+		flatEvents,
+		maxStep,
+	};
+}
+
 function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): MemoryBlock[] {
 	const osBlock = initialState.find((block) => !block.isFree && block.process === null);
 	const totalSize = initialState.reduce((sum, block) => sum + block.size, 0);
@@ -93,6 +309,7 @@ function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): 
 			usedSize: osUsedSize,
 			process: null,
 			isFree: false,
+			pageMeta: undefined,
 		});
 	}
 
@@ -104,6 +321,7 @@ function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): 
 			size: pageSize,
 			process: null,
 			isFree: true,
+			pageMeta: undefined,
 		});
 	}
 
@@ -114,6 +332,7 @@ function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): 
 			size: remainder,
 			process: null,
 			isFree: true,
+			pageMeta: undefined,
 		});
 	}
 
@@ -123,7 +342,7 @@ function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): 
 function selectVictimFrame(
 	state: MemoryBlock[],
 	frameMeta: Map<string, FrameMeta>,
-	pending: SegmentPageRequest[],
+	futureReferenceIds: string[],
 	algorithm: ReplacementAlgo,
 	clockPointer: number,
 ): { victimIndex: number; nextClockPointer: number } {
@@ -141,7 +360,7 @@ function selectVictimFrame(
 	}
 
 	if (algorithm === 'OPT') {
-		const victimIndex = selectOptimalVictim(candidates, pending.map((request) => request.id));
+		const victimIndex = selectOptimalVictim(candidates, futureReferenceIds);
 		return { victimIndex, nextClockPointer: clockPointer };
 	}
 
@@ -179,28 +398,102 @@ export function pagingSimulation(
 	const pageSize = Math.max(4, config.pageSize ?? 16);
 	let state = createFrameMemoryState(memoryState, pageSize);
 	const segmentUnits = buildSegmentsFromProcesses(processes);
-	const pending = toSegmentPages(segmentUnits, pageSize).sort((a, b) => a.arrivalTime - b.arrivalTime);
+	const allPages = toSegmentPages(segmentUnits, pageSize);
+	const pageById = new Map(allPages.map((page) => [page.id, page]));
+	const segmentRuntime = toSegmentRuntime(segmentUnits, pageSize);
+	const accessPlan = buildAccessPlan(segmentRuntime, processes, config);
 	const frameMeta = new Map<string, FrameMeta>();
 	const steps: SimulationStep[] = [];
 	let clockPointer = 0;
-	let step = 0;
+	let flatCursor = 0;
+	const finishedProcesses = new Set<string>();
+	const nruResetInterval = Math.max(1, Math.floor(config.nruResetInterval ?? 4));
 
-	while (pending.length > 0) {
+	for (let step = 0; step <= accessPlan.maxStep; step += 1) {
 		const loadedPageNames: string[] = [];
 		const replacedPageNames: string[] = [];
 		const waitingPageNames: string[] = [];
+		const releasedProcessNames: string[] = [];
+		const referenceEvents: PagingReferenceEvent[] = [];
 
-		for (let index = 0; index < pending.length; ) {
-			const pageRequest = pending[index];
-			if (pageRequest.arrivalTime > step) {
-				index += 1;
+		let pageFaults = 0;
+		let pageHits = 0;
+
+		for (const process of processes) {
+			if (finishedProcesses.has(process.id)) {
 				continue;
 			}
 
+			if (step < getProcessEndStep(process)) {
+				continue;
+			}
+
+			let releasedAny = false;
+			for (const block of state) {
+				if (block.isFree || block.process?.parentProcessId !== process.id) {
+					continue;
+				}
+
+				block.isFree = true;
+				block.process = null;
+				block.pageMeta = undefined;
+				frameMeta.delete(block.id);
+				releasedAny = true;
+			}
+
+			finishedProcesses.add(process.id);
+			if (releasedAny) {
+				releasedProcessNames.push(process.name);
+			}
+		}
+
+		const stepEvents = accessPlan.eventsByStep.get(step) ?? [];
+		for (let index = 0; index < stepEvents.length; index += 1) {
+			const event = stepEvents[index];
+			const page = pageById.get(event.pageId);
+			if (!page) {
+				continue;
+			}
+
+			const baseEvent: Omit<PagingReferenceEvent, 'outcome'> = {
+				step,
+				processId: event.parentProcessId,
+				processName: event.parentProcessName,
+				segmentType: event.segmentType,
+				pageId: event.pageId,
+				pageNumber: page.pageIndex + 1,
+				operation: event.op,
+			};
+
+			const loadedIndex = state.findIndex((block) => !block.isFree && block.process?.id === event.pageId);
+			if (loadedIndex !== -1) {
+				pageHits += 1;
+				referenceEvents.push({ ...baseEvent, outcome: 'hit' });
+				const frameId = state[loadedIndex].id;
+				const currentMeta = frameMeta.get(frameId);
+				if (currentMeta) {
+					const nextMeta: FrameMeta = {
+						...currentMeta,
+						lastUsed: step,
+						referenceBit: 1,
+						modifiedBit: event.op === 'write' ? 1 : currentMeta.modifiedBit,
+					};
+					frameMeta.set(frameId, nextMeta);
+					state[loadedIndex].pageMeta = { ...nextMeta };
+				}
+				continue;
+			}
+
+			pageFaults += 1;
 			let freeFrameIndex = state.findIndex((block) => block.isFree && block.id.startsWith('frame-') && block.size === pageSize);
+
 			if (freeFrameIndex === -1 && algorithm !== 'Paginacion Simple') {
-				const { victimIndex, nextClockPointer } = selectVictimFrame(state, frameMeta, pending.slice(index + 1), algorithm, clockPointer);
+				const futureReferenceIds = accessPlan.flatEvents
+					.slice(flatCursor + index + 1)
+					.map((futureEvent) => futureEvent.pageId);
+				const { victimIndex, nextClockPointer } = selectVictimFrame(state, frameMeta, futureReferenceIds, algorithm, clockPointer);
 				clockPointer = nextClockPointer;
+
 				if (victimIndex !== -1) {
 					const replacedPage = state[victimIndex].process;
 					if (replacedPage) {
@@ -209,33 +502,53 @@ export function pagingSimulation(
 					frameMeta.delete(state[victimIndex].id);
 					state[victimIndex].isFree = true;
 					state[victimIndex].process = null;
+					state[victimIndex].pageMeta = undefined;
 					freeFrameIndex = victimIndex;
 				}
 			}
 
 			if (freeFrameIndex === -1) {
-				waitingPageNames.push(`${pageRequest.parentProcessName}-${pageRequest.segmentType} P${pageRequest.pageIndex + 1}`);
-				index += 1;
+				waitingPageNames.push(`${event.parentProcessName}-${event.segmentType}`);
+				referenceEvents.push({ ...baseEvent, outcome: 'blocked' });
 				continue;
 			}
 
 			state[freeFrameIndex].isFree = false;
-			state[freeFrameIndex].process = toPageProcess(pageRequest, step, pageSize);
-			loadedPageNames.push(`${pageRequest.parentProcessName}-${pageRequest.segmentType} P${pageRequest.pageIndex + 1}`);
-			frameMeta.set(state[freeFrameIndex].id, { loadedAt: step, lastUsed: step, referenceBit: 1, modifiedBit: 0 });
-
-			pending.splice(index, 1);
+			state[freeFrameIndex].process = toPageProcess(page, step, pageSize);
+			loadedPageNames.push(`${event.parentProcessName}-${event.segmentType} P${page.pageIndex + 1}`);
+			const loadedMeta: FrameMeta = {
+				loadedAt: step,
+				lastUsed: step,
+				referenceBit: 1,
+				modifiedBit: event.op === 'write' ? 1 : 0,
+			};
+			frameMeta.set(state[freeFrameIndex].id, loadedMeta);
+			state[freeFrameIndex].pageMeta = { ...loadedMeta };
+			referenceEvents.push({ ...baseEvent, outcome: 'fault' });
 		}
 
-		const waitingProcesses = Array.from(
-			new Map(
-				pending
-					.filter((request) => request.arrivalTime <= step)
-					.map((request) => [request.parentProcessId, request.baseProcess]),
-			).values(),
-		).map((process) => ({ ...process }));
+		flatCursor += stepEvents.length;
+
+		if (algorithm === 'NRU' && step > 0 && step % nruResetInterval === 0) {
+			for (const [frameId, meta] of frameMeta.entries()) {
+				const nextMeta: FrameMeta = { ...meta, referenceBit: 0 };
+				frameMeta.set(frameId, nextMeta);
+				const blockIndex = state.findIndex((block) => block.id === frameId && !block.isFree);
+				if (blockIndex !== -1) {
+					state[blockIndex].pageMeta = { ...nextMeta };
+				}
+			}
+		}
+
+		const waitingProcesses = processes
+			.filter((process) => step >= process.arrivalTime && step < getProcessEndStep(process))
+			.filter((process) => !state.some((block) => !block.isFree && block.process?.parentProcessId === process.id))
+			.map((process) => ({ ...process }));
 
 		const descriptionParts: string[] = [];
+		if (releasedProcessNames.length > 0) {
+			descriptionParts.push(`Liberados: ${releasedProcessNames.join(', ')}.`);
+		}
 		if (loadedPageNames.length > 0) {
 			descriptionParts.push(`Cargadas: ${loadedPageNames.join(', ')}.`);
 		}
@@ -245,28 +558,31 @@ export function pagingSimulation(
 		if (waitingPageNames.length > 0) {
 			descriptionParts.push(`En espera: ${waitingPageNames.join(', ')}.`);
 		}
+		descriptionParts.push(`Referencias: ${stepEvents.length}. Hits: ${pageHits}. Fallos: ${pageFaults}.`);
 		if (descriptionParts.length === 0) {
 			descriptionParts.push('Estado: paginacion en ejecucion.');
 		}
+
+		const stats = buildStepStats(state, config.totalMemory);
 
 		steps.push({
 			stepNumber: step,
 			memoryState: cloneMemoryState(state),
 			processQueue: waitingProcesses,
-			stats: buildStepStats(state, config.totalMemory),
+			referenceEvents,
+			stats: {
+				...stats,
+				pageFaults,
+				pageHits,
+			},
 			description: descriptionParts.join(' '),
 		});
 
-		const hasFutureArrivals = pending.some((process) => process.arrivalTime > step);
-		const hasArrivedPending = pending.some((process) => process.arrivalTime <= step);
-		const hasFreeFrame = state.some((block) => block.isFree && block.id.startsWith('frame-') && block.size === pageSize);
-
-		if (algorithm === 'Paginacion Simple' && hasArrivedPending && !hasFreeFrame && !hasFutureArrivals) {
-			steps[steps.length - 1].description = 'Bloqueo: sin reemplazo de paginas y sin marcos libres para las paginas pendientes.';
+		const hasFutureSteps = step < accessPlan.maxStep;
+		const hasRunningProcesses = processes.some((process) => step + 1 < getProcessEndStep(process));
+		if (!hasFutureSteps && !hasRunningProcesses) {
 			break;
 		}
-
-		step += 1;
 	}
 
 	return steps;

@@ -43,6 +43,7 @@ export function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
   return state.map((block) => ({
     ...block,
     process: block.process ? { ...block.process } : null,
+    pageMeta: block.pageMeta ? { ...block.pageMeta } : undefined,
   }));
 }
 

@@ -25,6 +25,10 @@ export function MemoryBlock({ block, totalMemory, isLast = false, processColorOv
   const pageLabel = isPagedSegment
     ? `${process?.segmentType ?? 'Seg'} P${(process?.pageIndex ?? 0) + 1}`
     : `${block.size} KB`;
+
+  const bitsLabel = isPagedSegment && block.pageMeta
+    ? `R${block.pageMeta.referenceBit} M${block.pageMeta.modifiedBit}`
+    : null;
     
   const identifier = isPagedSegment
     ? `${ownerLabel}-P${(process?.pageIndex ?? 0) + 1}`
@@ -51,6 +55,7 @@ export function MemoryBlock({ block, totalMemory, isLast = false, processColorOv
       <div>ID: {identifier}</div>
       {isPagedSegment && <div>Tipo: {process?.segmentType ?? 'Seg'}</div>}
       {isPagedSegment && <div>Pagina: {(process?.pageIndex ?? 0) + 1}</div>}
+      {isPagedSegment && block.pageMeta && <div>Bits: R={block.pageMeta.referenceBit} M={block.pageMeta.modifiedBit}</div>}
       <div>Tamano: {block.size}KB</div>
       
       {/* NUEVO: Mostramos la fragmentación interna solo si está ocupado */}
@@ -124,10 +129,15 @@ export function MemoryBlock({ block, totalMemory, isLast = false, processColorOv
                 {block.size} KB
               </span>
             )}
+            {bitsLabel && (
+              <span className={`block truncate text-[11px] font-mono ${block.isFree ? 'text-black' : 'text-white'}`}>
+                {bitsLabel}
+              </span>
+            )}
           </>
         ) : showCompactLabel ? (
           <span className={`text-[10px] font-bold uppercase ${block.isFree ? 'text-black' : 'text-white'}`}>
-            {compactLabel}
+            {bitsLabel ? `${compactLabel} ${bitsLabel}` : compactLabel}
           </span>
         ) : null}
       </div>
