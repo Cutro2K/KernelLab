@@ -456,7 +456,7 @@ function SimulatorPanel({
       </header>
 
       <div className="space-y-4">
-        <div className="border-2 border-[#111] bg-white p-3">
+        <div className="border-2 h-[258px] border-[#111] bg-white p-3">
           <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-[#4b5563]">* Configuración</h4>
           <label className="mb-2 flex items-center gap-2 text-sm font-bold">
             Tipo de asignación:
@@ -1020,7 +1020,7 @@ export default function Comparison() {
 
   const leftMetrics = buildMetricsFromSteps(leftSteps, processes.length);
   const rightMetrics = buildMetricsFromSteps(rightSteps, processes.length);
-  const betterChoice = leftMetrics.score >= rightMetrics.score ? leftAlgorithmForMetrics : rightAlgorithmForMetrics;
+  const betterChoice = leftMetrics.score >= rightMetrics.score ? "ALGORITMO A" : "ALGORITMO B";
   const faultsMax = Math.max(1, leftMetrics.faults, rightMetrics.faults);
   const queueMax = Math.max(1, processes.length, leftMetrics.avgQueue, rightMetrics.avgQueue);
 
@@ -1379,7 +1379,7 @@ export default function Comparison() {
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithmForMetrics}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">ALGORITMO A</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{leftMetrics.score}</span>
                 <span className="text-sm font-bold text-[#4b5563]">score</span>
@@ -1391,7 +1391,7 @@ export default function Comparison() {
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithmForMetrics}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">ALGORITMO B</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{rightMetrics.score}</span>
                 <span className="text-sm font-bold text-[#4b5563]">score</span>
@@ -1403,7 +1403,7 @@ export default function Comparison() {
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{leftAlgorithmForMetrics}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">ALGORITMO A</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{leftMetrics.usage}%</span>
                 <span className="text-sm font-bold text-[#4b5563]">uso</span>
@@ -1415,7 +1415,7 @@ export default function Comparison() {
             </div>
 
             <div className="border-2 border-[#111] bg-white p-4 shadow-[3px_3px_0_rgba(0,0,0,0.08)]">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">{rightAlgorithmForMetrics}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-[#4b5563]">ALGORITMO B</p>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <span className="text-4xl font-bold">{rightMetrics.usage}%</span>
                 <span className="text-sm font-bold text-[#4b5563]">uso</span>
@@ -1431,8 +1431,8 @@ export default function Comparison() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-lg font-bold">Desglose por métrica</h4>
               <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wide text-[#4b5563]">
-                <span className="border-2 border-[#111] bg-white px-2 py-1">{leftAlgorithmForMetrics}</span>
-                <span className="border-2 border-[#111] bg-white px-2 py-1">{rightAlgorithmForMetrics}</span>
+                <span className="border-2 border-[#111] bg-white px-2 py-1">ALGORITMO A</span>
+                <span className="border-2 border-[#111] bg-white px-2 py-1">ALGORITMO B</span>
               </div>
             </div>
 
@@ -1449,7 +1449,7 @@ export default function Comparison() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <span className={`w-28 text-right text-xs font-bold ${leftWins ? 'text-[#364152]' : 'text-[#4b5563]'}`}>
-                          {leftAlgorithmForMetrics}: {row.leftValue}{row.suffix}
+                          ALG. A: {row.leftValue}{row.suffix}
                         </span>
                         <div className="h-4 flex-1 border-2 border-[#111] bg-white">
                           <div className={`h-full ${ALGORITHM_STYLES[leftAlgorithmForMetrics].fill}`} style={{ width: `${leftWidth}%` }} />
@@ -1458,7 +1458,7 @@ export default function Comparison() {
 
                       <div className="flex items-center gap-3">
                         <span className={`w-28 text-right text-xs font-bold ${rightWins ? 'text-[#364152]' : 'text-[#4b5563]'}`}>
-                          {rightAlgorithmForMetrics}: {row.rightValue}{row.suffix}
+                          ALG. B: {row.rightValue}{row.suffix}
                         </span>
                         <div className="h-4 flex-1 border-2 border-[#111] bg-white">
                           <div className={`h-full ${ALGORITHM_STYLES[rightAlgorithmForMetrics].fill}`} style={{ width: `${rightWidth}%` }} />
