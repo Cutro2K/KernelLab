@@ -48,8 +48,8 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
     const [algorithm, setAlgoritmoSeleccionado] = useState('First Fit');
     const [replacementAlgorithm, setReplacementAlgorithm] = useState('FIFO');
     const [pageSizeExponent, setPageSizeExponent] = useState(4);
-    const maxPageSize = Math.max(4, Math.floor(totalMemory / 2));
-    const maxPageSizeExponent = Math.max(2, Math.floor(Math.log2(maxPageSize)));
+    const maxPageSizeExponent = Math.max(4, Math.log2(Math.floor(totalMemory / 2)) - 2);
+    const minPageSizeExponent = Math.max(4, Math.log2(totalMemory) - 7);
     const pageSize = 2 ** pageSizeExponent;
     const showPageSizeSlider = allocationMode === 'No contigua' && algorithm === 'Paginacion Simple';
 
@@ -127,7 +127,7 @@ export function AlgorithmConfig({ className, totalMemory, onConfigSave }: Algori
                     <label className="font-bold min-[640px]:min-w-37.5">Tamaño de página: </label>
                     <input
                         type="range"
-                        min="2"
+                        min={minPageSizeExponent}
                         max={maxPageSizeExponent}
                         step="1"
                         value={pageSizeExponent}

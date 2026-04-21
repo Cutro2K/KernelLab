@@ -443,6 +443,7 @@ function SimulatorPanel({
   const showReplacementSelector = subAlgorithm === 'Paginacion Simple';
   const showSegmentationSelector = subAlgorithm === 'Segmentacion';
   const memorySize = 2 ** memoryExponent;
+  const minPageSizeExponent = Math.max(4, Math.log2(memorySize) - 7);
   const maxPageSizeExponent = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor(memorySize / 2)))));
   const safePageSizeExponent = Math.min(pageSizeExponent, maxPageSizeExponent);
   const pageSize = 2 ** safePageSizeExponent;
@@ -552,7 +553,7 @@ function SimulatorPanel({
                 <span className="min-[520px]:min-w-35">Tamaño de página:</span>
                 <input
                   type="range"
-                  min={2}
+                  min={minPageSizeExponent}
                   max={maxPageSizeExponent}
                   step={1}
                   value={safePageSizeExponent}
@@ -865,7 +866,7 @@ export default function Comparison() {
     setLeftMemoryExponent(next);
     setLeftOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
     setLeftPageSizeExponent((prev) => {
-      const nextMax = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
+      const nextMax = Math.max(4, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
       return Math.min(prev, nextMax);
     });
   };
@@ -874,7 +875,7 @@ export default function Comparison() {
     setRightMemoryExponent(next);
     setRightOsSize((prev) => Math.min(prev, 2 ** (next - 1)));
     setRightPageSizeExponent((prev) => {
-      const nextMax = Math.max(2, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
+      const nextMax = Math.max(4, Math.floor(Math.log2(Math.max(4, Math.floor((2 ** next) / 2)))));
       return Math.min(prev, nextMax);
     });
   };
