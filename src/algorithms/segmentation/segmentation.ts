@@ -2,6 +2,7 @@ import { buildStepStats } from '../stepStats';
 import { buildSegmentsFromProcesses, type SegmentUnit } from '../nonContiguous/segments';
 import { type MemoryBlock, type Process, type SimulationConfig, type SimulationStep } from '../types';
 import { cloneMemoryState } from '../../hooks/useAlgorithm';
+import { mergeAdjacentFreeBlocks } from '../../hooks/useAlgorithm';
 
 type SegmentStrategy = 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
 type ProcessRuntime = {
@@ -35,32 +36,12 @@ function toProcess(segment: SegmentUnit, step: number): Process {
 	};
 }
 
-function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
-	if (state.length === 0) return state;
-
-	const merged: MemoryBlock[] = [];
-	for (const block of state) {
-		const last = merged[merged.length - 1];
-		if (last && last.isFree && block.isFree) {
-			last.size += block.size;
-			continue;
-		}
-		merged.push({ ...block, process: block.process ? { ...block.process } : null });
-	}
-
-	return merged;
-}
-
 function isOnlyOsOccupied(state: MemoryBlock[]): boolean {
 	return state.every((block) => block.isFree || (block.id === 'os' && !block.isFree && block.process === null));
 }
 
-function selectFreeBlockIndex(
-	state: MemoryBlock[],
-	segmentSize: number,
-	strategy: SegmentStrategy,
-	nextFitStartIndex: number,
-): number {
+// Encuentra indice adecuado según algoritmo
+function selectFreeBlockIndex(state: MemoryBlock[], segmentSize: number, strategy: SegmentStrategy, nextFitStartIndex: number): number {
 	if (strategy === 'Best Fit') {
 		let bestIndex = -1;
 		let bestSize = Number.MAX_VALUE;
@@ -108,10 +89,12 @@ function selectFreeBlockIndex(
 	return state.findIndex((block) => block.isFree && block.size >= segmentSize);
 }
 
+// Ejecuta la simulación
 export function segmentationSimulation(processes: Process[], memoryState: MemoryBlock[], config: SimulationConfig): SimulationStep[] {
 	let state = cloneMemoryState(memoryState);
 	const processRuntime = new Map<string, ProcessRuntime>();
 
+	// Genera metadatos para cada proceso y sus segmentos
 	for (const process of processes) {
 		processRuntime.set(process.id, {
 			process: { ...process },
@@ -122,6 +105,7 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 		});
 	}
 
+	// Lista de segmentos pendientes ordenada por tiempo
 	const pending = buildSegmentsFromProcesses(processes)
 		.map((segment) => ({
 			...segment,
@@ -141,6 +125,7 @@ export function segmentationSimulation(processes: Process[], memoryState: Memory
 	let nextFitStartIndex = 0;
 	let step = 0;
 
+	// Lógica principal de segmentación
 	while (true) {
 		const releasedProcessNames: string[] = [];
 		const loadedSegmentNames: string[] = [];

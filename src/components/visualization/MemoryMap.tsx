@@ -18,7 +18,7 @@ export function MemoryMap({className = '', }: MemoryMapProps) {
 
   if (memoryState === null) {
     return (
-      <div className="flex items-center justify-center w-full h-[600px] bg-gray-100 border-2 border-dashed border-gray-400 rounded-md text-gray-500 font-mono">
+      <div className="flex items-center justify-center w-full h-150 bg-gray-100 border-2 border-dashed border-gray-400 rounded-md text-gray-500 font-mono">
         ⚠️ El algoritmo "{algorithmId}" todavía no está en el registro.
       </div>
     );

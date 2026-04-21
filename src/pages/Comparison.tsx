@@ -785,10 +785,6 @@ function ReferenceTimelineModal({
   );
 }
 
-/*
-
-*/
-
 export const CompProcessList = () => {
   const processes = useComparisonStore((state) => state.processes);
 

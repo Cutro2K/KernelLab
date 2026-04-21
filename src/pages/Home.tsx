@@ -121,7 +121,6 @@ export default function Home() {
       return;
     }
 
-    // Advance state even if framer misses animation-complete callback.
     const commitTimer = window.setTimeout(() => {
       finishMove();
     }, 820);

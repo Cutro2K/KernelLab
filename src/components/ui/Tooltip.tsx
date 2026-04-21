@@ -20,11 +20,10 @@ export function Tooltip({ content, children, wrapperClassName = 'relative inline
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
     const padding = 8;
 
-    // Position: bottom-left corner of tooltip at mouse cursor
+    // Posición
     let left = e.clientX;
     let top = e.clientY - tooltipRect.height;
 
-    // Clamp to viewport
     left = Math.max(padding, Math.min(left, window.innerWidth - tooltipRect.width - padding));
     top = Math.max(padding, Math.min(top, window.innerHeight - tooltipRect.height - padding));
 

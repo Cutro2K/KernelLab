@@ -18,6 +18,7 @@ function getSegmentArrival(process: Process, segmentType: SegmentType): number {
   return process.heapArrivalTime;
 }
 
+// Convierte lista de procesos en lista de segmentos
 export function buildSegmentsFromProcesses(processes: Process[]): SegmentUnit[] {
   return processes.flatMap((process) => {
     const segments: Array<{ segmentType: SegmentType; size: number }> = [

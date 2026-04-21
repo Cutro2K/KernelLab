@@ -46,7 +46,7 @@ export const useSimulationStore = create<SimulationStore>()((set) => ({
     processes: [],
 
     setMemoryState: (state: MemoryBlock[]) => set({ memoryState: state }),
-    setAlgorithm: (algo: any) => set({ algorithm: algo }), // Reemplaza 'any' por tu tipo
+    setAlgorithm: (algo: AlgorithmOption | null) => set({ algorithm: algo }),
     setCurrentStep: (step: number) => set({ currentStep: step }),
     setConfigParams: (params: SimulationConfig) => set({ configParams: params }),
     setStatistics: (stats: StepStats) => set({ statistics: stats }),
@@ -75,7 +75,6 @@ export const useComparisonStore = create<ComparisonStore>()((set) => ({
         processes: state.processes ? [...state.processes, process] : [process],
     })),
     
-    // Aquí está la parte que faltaba completada
     removeProcess: (id: string | number) => set((state) => ({
         processes: state.processes 
             ? state.processes.filter((p) => p.id !== id)

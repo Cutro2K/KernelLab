@@ -7,19 +7,19 @@ interface ProcessQueueProps {
 }
 
 export function ProcessQueue({ mode = 'simulation' }: ProcessQueueProps) {
-  // 1. Obtenemos datos del Simulador Principal
+  // Obtenemos datos del Simulador Principal
   const simProcesses = useSimulationStore((state) => state.processes);
   const simMemory = useSimulationStore((state) => state.memoryState);
   const simStep = useSimulationStore((state) => state.currentStep);
 
-  // 2. Obtenemos datos del Comparador
+  // Obtenemos datos del Comparador
   // Nota: En la comparación la cola de procesos es la misma para ambos
   const compProcesses = useComparisonStore((state) => state.processes);
   const compMemory1 = useComparisonStore((state) => state.memoryState1);
   const compMemory2 = useComparisonStore((state) => state.memoryState2);
   const compStep = useComparisonStore((state) => state.currentStep);
 
-  // 3. Función que decide qué datos usar según el 'mode' elegido
+  // Función que decide qué datos usar según el 'mode' elegido
   const getActiveData = () => {
     switch (mode) {
       case 'comparison1':
@@ -35,7 +35,6 @@ export function ProcessQueue({ mode = 'simulation' }: ProcessQueueProps) {
   // Extraemos los datos correctos
   const { processList, memoryState, currentStep } = getActiveData();
 
-  // 4. Tu lógica intacta a partir de acá
   const processInMemory = memoryState?.filter((b) => !b.isFree);
 
   const finished = currentStep !== null
