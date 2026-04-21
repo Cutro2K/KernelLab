@@ -1,22 +1,7 @@
 import { type Process, type SimulationStep, type SimulationConfig, type MemoryBlock } from '../types';
 import { buildStepStats } from '../stepStats';
 import { cloneMemoryState } from '../../hooks/useAlgorithm';
-
-function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
-	if (state.length === 0) return state;
-
-	const merged: MemoryBlock[] = [];
-	for (const block of state) {
-		const last = merged[merged.length - 1];
-		if (last && last.isFree && block.isFree) {
-			last.size += block.size;
-			continue;
-		}
-		merged.push({ ...block, process: block.process ? { ...block.process } : null });
-	}
-
-	return merged;
-}
+import { mergeAdjacentFreeBlocks } from '../../hooks/useAlgorithm';
 
 function hasRunningProcesses(state: MemoryBlock[]): boolean {
 	return state.some((block) => !block.isFree && block.process !== null);

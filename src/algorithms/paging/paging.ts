@@ -25,6 +25,7 @@ type SegmentPageRequest = {
 
 type AccessOp = 'read' | 'write';
 
+// Evento, parte de la lista de referencias
 type AccessEvent = {
 	step: number;
 	pageId: string;
@@ -52,6 +53,7 @@ type AccessPlan = {
 	maxStep: number;
 };
 
+// Se clona el estado de la memoria para no modificar el original
 function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
 	return state.map((block) => ({
 		...block,
@@ -85,6 +87,7 @@ function toPageProcess(page: SegmentPageRequest, step: number, pageSize: number)
 	};
 }
 
+// Convierte un segmento de un proceso en un conjunto de páginas
 function toSegmentPages(segments: SegmentUnit[], pageSize: number): SegmentPageRequest[] {
 	return segments.flatMap((segment) => {
 		const pageCount = Math.max(1, Math.ceil(segment.size / pageSize));
@@ -104,6 +107,7 @@ function toSegmentPages(segments: SegmentUnit[], pageSize: number): SegmentPageR
 	});
 }
 
+// Construye metadatos de ejecución para cada página por segmento, para luego generar referencias
 function toSegmentRuntime(segments: SegmentUnit[], pageSize: number): SegmentRuntime[] {
 	return segments
 		.filter((segment) => segment.size > 0)
@@ -124,6 +128,7 @@ function toSegmentRuntime(segments: SegmentUnit[], pageSize: number): SegmentRun
 		});
 }
 
+// Generador de numeros pseudo-aleatorios
 function createPrng(seed: number): () => number {
 	let state = seed >>> 0;
 	return () => {
@@ -132,6 +137,7 @@ function createPrng(seed: number): () => number {
 	};
 }
 
+// Helper para normalizar valores entre 0 y 1, útil para ajustar probabilidades de referencia
 function clamp01(value: number): number {
 	if (!Number.isFinite(value)) {
 		return 0;
@@ -145,6 +151,8 @@ function clamp01(value: number): number {
 	return value;
 }
 
+// Recibe array de pesos y devuelve un índice basado en esos pesos (mayor peso = mayor probabilidad de ser elegido)
+// Se usa para elegir segmentos a referenciar basados en su tipo y progreso de ejecución
 function selectWeightedIndex(weights: number[], rand: () => number): number {
 	const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
 	if (totalWeight <= 0) {
@@ -163,10 +171,12 @@ function selectWeightedIndex(weights: number[], rand: () => number): number {
 	return Math.max(0, weights.length - 1);
 }
 
+// Calcula en qué paso finaliza un proceso
 function getProcessEndStep(process: Process): number {
 	return process.arrivalTime + Math.max(1, process.duration);
 }
 
+// Asigna un peso a cada segmento
 function getBaseSegmentWeight(segmentType: SegmentUnit['segmentType']): number {
 	if (segmentType === 'Code') return 0.35;
 	if (segmentType === 'Data') return 0.3;
@@ -174,6 +184,7 @@ function getBaseSegmentWeight(segmentType: SegmentUnit['segmentType']): number {
 	return 0.15;
 }
 
+// Ajusta el peso de cada segmento según el progreso de ejecución del proceso, para simular patrones de referencia realistas
 function getAdjustedSegmentWeight(segmentType: SegmentUnit['segmentType'], progress: number): number {
 	let weight = getBaseSegmentWeight(segmentType);
 	if (progress <= 0.25) {
@@ -189,6 +200,7 @@ function getAdjustedSegmentWeight(segmentType: SegmentUnit['segmentType'], progr
 	return Math.max(0.01, weight);
 }
 
+// Decide si una referencia va a ser de lectura o escritura, y ajusta probabilidades según el tipo de segmento
 function chooseOperation(segmentType: SegmentUnit['segmentType'], rand: () => number, enableWrites: boolean): AccessOp {
 	if (!enableWrites) {
 		return 'read';
@@ -205,6 +217,7 @@ function chooseOperation(segmentType: SegmentUnit['segmentType'], rand: () => nu
 	return rand() < writeProbability ? 'write' : 'read';
 }
 
+// Decide que página del segmento referenciar, con alta probabilidad de elegir la misma página o páginas cercanas a la última referenciada, para simular localidad
 function choosePageIndex(segment: SegmentRuntime, lastPageBySegment: Map<string, number>, locality: number, rand: () => number): number {
 	const last = lastPageBySegment.get(segment.segmentId);
 	if (last === undefined || segment.pageCount <= 1 || rand() > locality) {
@@ -223,6 +236,7 @@ function choosePageIndex(segment: SegmentRuntime, lastPageBySegment: Map<string,
 	return Math.max(0, last - 1);
 }
 
+// Construye el plan de acceso (referencias) a páginas para la simulación
 function buildAccessPlan(segments: SegmentRuntime[], processes: Process[], config: SimulationConfig): AccessPlan {
 	const seed = Math.floor(config.referenceSeed ?? 42);
 	const rand = createPrng(seed);
@@ -290,6 +304,7 @@ function buildAccessPlan(segments: SegmentRuntime[], processes: Process[], confi
 	};
 }
 
+// Reserva espacio para el OS y divide el resto de la memoria en marcos de página
 function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): MemoryBlock[] {
 	const osBlock = initialState.find((block) => !block.isFree && block.process === null);
 	const totalSize = initialState.reduce((sum, block) => sum + block.size, 0);
@@ -339,6 +354,8 @@ function createFrameMemoryState(initialState: MemoryBlock[], pageSize: number): 
 	return state;
 }
 
+// Elige la página a reemplazar según algoritmo seleccionado y estado de la memoria
+// Algoritmos en ../algorithms/allocation se encargan de devolver el indice de la página a reemplazar
 function selectVictimFrame(
 	state: MemoryBlock[],
 	frameMeta: Map<string, FrameMeta>,
@@ -346,6 +363,7 @@ function selectVictimFrame(
 	algorithm: ReplacementAlgo,
 	clockPointer: number,
 ): { victimIndex: number; nextClockPointer: number } {
+	// Calcula candidatos a reemplazo
 	const candidates: ReplacementCandidate[] = state
 		.map((block, index) => ({ block, index }))
 		.filter(({ block }) => !block.isFree && block.id.startsWith('frame-') && block.process !== null)
@@ -389,6 +407,7 @@ function selectVictimFrame(
 	return { victimIndex, nextClockPointer: clockPointer };
 }
 
+// Crea todos los pasos de la simulación de paginación, incluyendo referencias, cargas, reemplazos y liberaciones
 export function pagingSimulation(
 	algorithm: ReplacementAlgo,
 	processes: Process[],

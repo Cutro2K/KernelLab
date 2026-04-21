@@ -39,6 +39,22 @@ function createInitialMemoryState(totalMemory: number, osSize: number): MemoryBl
   return initialState;
 }
 
+export function mergeAdjacentFreeBlocks(state: MemoryBlock[]): MemoryBlock[] {
+	if (state.length === 0) return state;
+
+	const merged: MemoryBlock[] = [];
+	for (const block of state) {
+		const last = merged[merged.length - 1];
+		if (last && last.isFree && block.isFree) {
+			last.size += block.size;
+			continue;
+		}
+		merged.push({ ...block, process: block.process ? { ...block.process } : null });
+	}
+
+	return merged;
+}
+
 export function cloneMemoryState(state: MemoryBlock[]): MemoryBlock[] {
   return state.map((block) => ({
     ...block,

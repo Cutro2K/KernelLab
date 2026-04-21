@@ -90,7 +90,7 @@ export interface StepStats {
     memoryUsage: number; // porcentaje
 }
 
-  export interface PagingReferenceEvent {
+export interface PagingReferenceEvent {
     step: number;
     processId: string;
     processName: string;
@@ -99,7 +99,7 @@ export interface StepStats {
     pageNumber: number;
     operation: 'read' | 'write';
     outcome: 'hit' | 'fault' | 'blocked';
-  }
+}
 
 export interface SimulationStep {
     stepNumber: number;
@@ -121,11 +121,11 @@ export interface SimulationConfig {
     pageSize?: number;
     segmentationStrategy?: 'First Fit' | 'Best Fit' | 'Worst Fit' | 'Next Fit';
     referenceString?: number[]; // para reemplazo de páginas
-  referenceSeed?: number;
-  referenceLocality?: number;
-  maxReferencesPerCycle?: number;
-  nruResetInterval?: number;
-  enableWriteReferences?: boolean;
+    referenceSeed?: number;
+    referenceLocality?: number;
+    maxReferencesPerCycle?: number;
+    nruResetInterval?: number;
+    enableWriteReferences?: boolean;
 }
 
 export interface SimulationStore {
