@@ -19,7 +19,17 @@ It lets you:
 - Framer Motion (animations)
 - React Router DOM
 
-## Scripts
+## How To Run
+
+### Live Demo
+
+You can try the web version hosted on GitHub Pages here: https://cutro2k.github.io/KernelLab/
+
+### Local Installation
+
+First, you need to download and install [Node.js](https://nodejs.org/en) to use the npm package manager.
+
+Then, clone this GitHub repo and run the following commands:
 
 ```bash
 npm install
